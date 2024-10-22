@@ -9,9 +9,9 @@ import (
 
 type Contact data.Contact
 
-func (c Contact) Title() string       { return c.Name }
+func (c Contact) Title() string       { return c.Username }
 func (c Contact) Description() string { return c.Conversation[len(c.Conversation)-1].Content }
-func (c Contact) FilterValue() string { return c.Name }
+func (c Contact) FilterValue() string { return c.Username }
 
 func NewListDelegate(keys *ListDelegateKeyMap) list.DefaultDelegate {
 	d := list.NewDefaultDelegate()
@@ -20,7 +20,7 @@ func NewListDelegate(keys *ListDelegateKeyMap) list.DefaultDelegate {
 		var selectedName string
 
 		if i, ok := m.SelectedItem().(Contact); ok {
-			selectedName = i.Name
+			selectedName = i.Username
 		} else {
 			return nil
 		}

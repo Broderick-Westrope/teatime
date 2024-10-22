@@ -2,43 +2,24 @@ package components
 
 import (
 	"github.com/Broderick-Westrope/teatime/internal/data"
+	"github.com/Broderick-Westrope/teatime/internal/tui"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 )
 
 type ChatModel struct {
 	messages []data.Message
 	username string
-	styles   ChatStyles
-}
-
-type ChatStyles struct {
-	LeftBubble  lipgloss.Style
-	RightBubble lipgloss.Style
-	leftAlign   lipgloss.Style
-	rightAlign  lipgloss.Style
+	styles   *ChatStyles
 }
 
 // NewChatModel creates a new ChatModel.
 //   - messages is list of all messages to display ordered from oldest (first) to newest (last).
 //   - username is the username that the active user signed up with. This is used to identify which messages they have sent.
-//   - width is the width to use for each chat bubble. It should be equal to the total width of the model. This allows aligning messages on the right.
-func NewChatModel(messages []data.Message, username string, width int) *ChatModel {
-	leftBubbleBorder := lipgloss.RoundedBorder()
-	leftBubbleBorder.BottomLeft = "└"
-
-	rightBubbleBorder := lipgloss.RoundedBorder()
-	rightBubbleBorder.BottomRight = "┘"
-
+func NewChatModel(messages []data.Message, username string) *ChatModel {
 	return &ChatModel{
 		messages: messages,
 		username: username,
-		styles: ChatStyles{
-			LeftBubble:  lipgloss.NewStyle().Border(leftBubbleBorder, true),
-			RightBubble: lipgloss.NewStyle().Border(rightBubbleBorder, true),
-			leftAlign:   lipgloss.NewStyle().Width(width).AlignHorizontal(lipgloss.Left),
-			rightAlign:  lipgloss.NewStyle().Width(width).AlignHorizontal(lipgloss.Right),
-		},
+		styles:   DefaultChatStyles(),
 	}
 }
 
@@ -46,7 +27,14 @@ func (m *ChatModel) Init() tea.Cmd {
 	return nil
 }
 
-func (m *ChatModel) Update(_ tea.Msg) (tea.Model, tea.Cmd) {
+func (m *ChatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tui.ComponentSizeMsg:
+		m.styles.leftAlign = m.styles.leftAlign.Width(msg.Width)
+		m.styles.rightAlign = m.styles.rightAlign.Width(msg.Width)
+		return m, nil
+	}
+
 	return m, nil
 }
 

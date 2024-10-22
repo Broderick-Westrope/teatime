@@ -6,7 +6,8 @@ import (
 )
 
 type Model struct {
-	child tea.Model
+	child     tea.Model
+	ExitError error
 }
 
 func NewModel(child tea.Model) *Model {
@@ -21,11 +22,9 @@ func (m *Model) Init() tea.Cmd {
 
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
-	case tea.WindowSizeMsg:
-		m.child.Update(tui.ComponentSizeMsg{
-			Width:  100,
-			Height: 20,
-		})
+	case tui.FatalErrorMsg:
+		m.ExitError = msg
+		return m, tea.Quit
 
 	case tea.KeyMsg:
 		switch msg.String() {

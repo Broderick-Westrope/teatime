@@ -6,6 +6,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+var _ tea.Model = &Model{}
+
 type Model struct {
 	list list.Model
 }
