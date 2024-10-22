@@ -9,6 +9,7 @@ type ChatStyles struct {
 	Header       lipgloss.Style
 	Conversation lipgloss.Style
 	Timestamp    lipgloss.Style
+	BubbleWrap   func(textLen int) lipgloss.Style
 
 	LeftBubble lipgloss.Style
 	leftAlign  lipgloss.Style
@@ -23,8 +24,7 @@ func DefaultChatStyleFunc(width, height int) *ChatStyles {
 
 	rightBubbleBorder := lipgloss.RoundedBorder()
 	rightBubbleBorder.BottomRight = "┘"
-
-	bubbleWidth := lipgloss.NewStyle().Width((width / 5) * 4)
+	
 	fullWidth := lipgloss.NewStyle().Width(width)
 
 	return &ChatStyles{
@@ -35,11 +35,15 @@ func DefaultChatStyleFunc(width, height int) *ChatStyles {
 		Header:       lipgloss.NewStyle().MaxWidth(width-10).MaxHeight(2).BorderStyle(lipgloss.NormalBorder()).BorderBottom(true).Padding(0, 4),
 		Conversation: lipgloss.NewStyle().Height(height - (6)), // accounting for the header and input heights
 		Timestamp:    fullWidth.AlignHorizontal(lipgloss.Center),
+		BubbleWrap: func(textLen int) lipgloss.Style {
+			bubbleMaxWidth := (width / 5) * 4
+			return lipgloss.NewStyle().Width(min(textLen, bubbleMaxWidth))
+		},
 
-		LeftBubble: bubbleWidth.Border(leftBubbleBorder, true),
+		LeftBubble: lipgloss.NewStyle().Border(leftBubbleBorder, true),
 		leftAlign:  fullWidth.AlignHorizontal(lipgloss.Left),
 
-		RightBubble: bubbleWidth.Border(rightBubbleBorder, true),
+		RightBubble: lipgloss.NewStyle().Border(rightBubbleBorder, true),
 		rightAlign:  fullWidth.AlignHorizontal(lipgloss.Right),
 	}
 }

@@ -108,19 +108,19 @@ func (m *ChatModel) viewConversation() string {
 }
 
 func (m *ChatModel) viewChatBubble(msg string, placeOnRight bool) string {
-	var output string
+	msg = m.styles.BubbleWrap(len(msg)).Render(msg)
 
 	switch placeOnRight {
 	case true:
-		output = m.styles.RightBubble.Render(msg)
-		output = m.styles.rightAlign.Render(output)
+		msg = m.styles.RightBubble.Render(msg)
+		msg = m.styles.rightAlign.Render(msg)
 
 	case false:
-		output = m.styles.LeftBubble.Render(msg)
-		output = m.styles.leftAlign.Render(output)
+		msg = m.styles.LeftBubble.Render(msg)
+		msg = m.styles.leftAlign.Render(msg)
 	}
 
-	return output + "\n"
+	return msg + "\n"
 }
 
 func (m *ChatModel) viewTimestamp(sentAt time.Time) string {
