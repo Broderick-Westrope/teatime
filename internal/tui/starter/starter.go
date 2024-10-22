@@ -1,6 +1,7 @@
 package starter
 
 import (
+	"github.com/Broderick-Westrope/teatime/internal/tui"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -19,9 +20,13 @@ func (m *Model) Init() tea.Cmd {
 }
 
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	var cmd tea.Cmd
-
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.child.Update(tui.ComponentSizeMsg{
+			Width:  100,
+			Height: 20,
+		})
+
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "q", "ctrl+c":
@@ -29,8 +34,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 
+	var cmd tea.Cmd
 	m.child, cmd = m.child.Update(msg)
-
 	return m, cmd
 }
 

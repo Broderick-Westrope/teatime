@@ -1,19 +1,15 @@
 package components
 
 import (
+	"github.com/Broderick-Westrope/teatime/internal/data"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
 
 type ChatModel struct {
-	messages []ChatMessage
+	messages []data.Message
 	username string
 	styles   ChatStyles
-}
-
-type ChatMessage struct {
-	Content string
-	Author  string
 }
 
 type ChatStyles struct {
@@ -27,7 +23,7 @@ type ChatStyles struct {
 //   - messages is list of all messages to display ordered from oldest (first) to newest (last).
 //   - username is the username that the active user signed up with. This is used to identify which messages they have sent.
 //   - width is the width to use for each chat bubble. It should be equal to the total width of the model. This allows aligning messages on the right.
-func NewChatModel(messages []ChatMessage, username string, width int) *ChatModel {
+func NewChatModel(messages []data.Message, username string, width int) *ChatModel {
 	leftBubbleBorder := lipgloss.RoundedBorder()
 	leftBubbleBorder.BottomLeft = "└"
 
