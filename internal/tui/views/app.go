@@ -59,7 +59,7 @@ func NewAppModel() *AppModel {
 
 	return &AppModel{
 		contacts:      contacts.NewModel(contactItems),
-		chat:          components.NewChatModel(contactItems[0].Conversation, "Cordia_Tromp", contactItems[0].Username),
+		chat:          components.NewChatModel(contactItems[0].Conversation, "Cordia_Tromp", contactItems[0].Username, false),
 		chatIsFocused: false,
 		styles:        DefaultAppStyles(),
 	}
@@ -95,6 +95,7 @@ func (m *AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.chat.SetConversation(contact.Conversation, contact.Username)
 		m.chatIsFocused = true
+		m.chat.SwitchStyleFunc(components.EnabledChatStyleFunc)
 		return m, nil
 
 	case tui.SendMessageMsg:
@@ -108,6 +109,7 @@ func (m *AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "esc":
 			m.chatIsFocused = false
+			m.chat.SwitchStyleFunc(components.DisabledStyleFunc)
 			return m, nil
 		}
 	}

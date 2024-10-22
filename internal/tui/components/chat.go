@@ -23,9 +23,14 @@ type ChatModel struct {
 // NewChatModel creates a new ChatModel.
 //   - conversation is list of all messages to display ordered from oldest (first) to newest (last).
 //   - username is the username that the active user signed up with. This is used to identify which conversation they have sent.
-func NewChatModel(conversation []data.Message, username, chatName string) *ChatModel {
+func NewChatModel(conversation []data.Message, username, chatName string, enabled bool) *ChatModel {
 	input := textinput.New()
 	input.Placeholder = "Message"
+
+	styleFunc := DisabledStyleFunc
+	if enabled {
+		styleFunc = EnabledChatStyleFunc
+	}
 
 	return &ChatModel{
 		conversation: conversation,
@@ -33,8 +38,8 @@ func NewChatModel(conversation []data.Message, username, chatName string) *ChatM
 		contactName:  chatName,
 		input:        input,
 
-		styleFunc: DefaultChatStyleFunc,
-		styles:    DefaultChatStyleFunc(0, 0),
+		styleFunc: styleFunc,
+		styles:    styleFunc(0, 0),
 	}
 }
 
@@ -115,19 +120,24 @@ func (m *ChatModel) viewTimestamp(sentAt time.Time) string {
 	var output string
 	switch {
 	case time.Now().Year()-sentAt.Year() > 0: // different year
-		output += sentAt.Format("Mon, 02 Jan 2006 at 6:00 AM")
+		output += sentAt.Format("Mon, 02 Jan 2006 at 3:04 AM")
 
 	case time.Now().YearDay()-sentAt.YearDay() == 0: // same day
-		output += "Today " + sentAt.Format("6:00 AM")
+		output += "Today " + sentAt.Format("3:04 PM")
 
 	case time.Now().YearDay()-sentAt.YearDay() == 1: // previous day
-		output += "Yesterday " + sentAt.Format("6:00 AM")
+		output += "Yesterday " + sentAt.Format("3:04 PM")
 
 	case time.Now().YearDay()-sentAt.YearDay() < 7: // within the last week
-		output += sentAt.Format("Monday 6:00 AM")
+		output += sentAt.Format("Monday 3:04 PM")
 
 	default: // this year but older than a week
-		output += sentAt.Format("Mon, 02 Jan at 6:00 AM")
+		output += sentAt.Format("Mon, 02 Jan at 3:04 PM")
 	}
 	return m.styles.Timestamp.Render(output) + "\n"
+}
+
+func (m *ChatModel) SwitchStyleFunc(styleFunc ChatStyleFunc) {
+	m.styles = styleFunc(m.styles.Width, m.styles.Height)
+	m.styleFunc = styleFunc
 }
