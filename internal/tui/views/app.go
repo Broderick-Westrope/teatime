@@ -59,7 +59,7 @@ func NewAppModel() *AppModel {
 
 	return &AppModel{
 		contacts:      contacts.NewModel(contactItems),
-		chat:          components.NewChatModel(contactItems[0].Conversation, "Cordia_Tromp"),
+		chat:          components.NewChatModel(contactItems[0].Conversation, "Cordia_Tromp", contactItems[0].Username),
 		chatIsFocused: false,
 		styles:        DefaultAppStyles(),
 	}
@@ -93,7 +93,7 @@ func (m *AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if err != nil {
 			return m, tui.FatalErrorCmd(err)
 		}
-		m.chat.SetConversation(contact.Conversation)
+		m.chat.SetConversation(contact.Conversation, contact.Username)
 		m.chatIsFocused = true
 		return m, nil
 

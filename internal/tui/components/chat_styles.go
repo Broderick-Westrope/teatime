@@ -3,6 +3,7 @@ package components
 import "github.com/charmbracelet/lipgloss"
 
 type ChatStyles struct {
+	Header    lipgloss.Style
 	Timestamp lipgloss.Style
 
 	LeftBubble lipgloss.Style
@@ -23,6 +24,8 @@ func DefaultChatStyleFunc(width, _ int) *ChatStyles {
 	fullWidth := lipgloss.NewStyle().Width(width)
 
 	return &ChatStyles{
+		// TODO: Add cleaner truncation for the header content. Truncation should not affect the line break effect.
+		Header:    lipgloss.NewStyle().MaxWidth(width-10).BorderStyle(lipgloss.NormalBorder()).BorderBottom(true).Padding(0, 4),
 		Timestamp: fullWidth.AlignHorizontal(lipgloss.Center),
 
 		LeftBubble: bubbleWidth.Border(leftBubbleBorder, true),
