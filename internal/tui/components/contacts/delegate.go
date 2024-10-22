@@ -2,6 +2,7 @@ package contacts
 
 import (
 	"github.com/Broderick-Westrope/teatime/internal/data"
+	"github.com/Broderick-Westrope/teatime/internal/tui"
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
@@ -17,10 +18,10 @@ func NewListDelegate(keys *ListDelegateKeyMap) list.DefaultDelegate {
 	d := list.NewDefaultDelegate()
 
 	d.UpdateFunc = func(msg tea.Msg, m *list.Model) tea.Cmd {
-		var selectedName string
+		var selectedUsername string
 
 		if i, ok := m.SelectedItem().(Contact); ok {
-			selectedName = i.Username
+			selectedUsername = i.Username
 		} else {
 			return nil
 		}
@@ -29,7 +30,7 @@ func NewListDelegate(keys *ListDelegateKeyMap) list.DefaultDelegate {
 		case tea.KeyMsg:
 			switch {
 			case key.Matches(msg, keys.submit):
-				return m.NewStatusMessage("You chose " + selectedName)
+				return tui.UpdateChatCmd
 
 			case key.Matches(msg, keys.new):
 				return m.NewStatusMessage("Creating new")
@@ -39,7 +40,7 @@ func NewListDelegate(keys *ListDelegateKeyMap) list.DefaultDelegate {
 				if len(m.Items()) == 0 {
 					keys.delete.SetEnabled(false)
 				}
-				return m.NewStatusMessage("Deleted " + selectedName)
+				return m.NewStatusMessage("Deleted " + selectedUsername)
 			}
 		}
 

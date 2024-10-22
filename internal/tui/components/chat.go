@@ -7,19 +7,22 @@ import (
 )
 
 type ChatModel struct {
-	messages []data.Message
-	username string
-	styles   *ChatStyles
+	conversation []data.Message
+	username     string
+
+	styles    *ChatStyles
+	styleFunc func(width, height int) *ChatStyles
 }
 
 // NewChatModel creates a new ChatModel.
-//   - messages is list of all messages to display ordered from oldest (first) to newest (last).
-//   - username is the username that the active user signed up with. This is used to identify which messages they have sent.
-func NewChatModel(messages []data.Message, username string) *ChatModel {
+//   - conversation is list of all messages to display ordered from oldest (first) to newest (last).
+//   - username is the username that the active user signed up with. This is used to identify which conversation they have sent.
+func NewChatModel(conversation []data.Message, username string) *ChatModel {
 	return &ChatModel{
-		messages: messages,
-		username: username,
-		styles:   DefaultChatStyles(),
+		conversation: conversation,
+		username:     username,
+		styleFunc:    DefaultChatStyleFunc,
+		styles:       DefaultChatStyleFunc(0, 0),
 	}
 }
 
@@ -30,8 +33,10 @@ func (m *ChatModel) Init() tea.Cmd {
 func (m *ChatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tui.ComponentSizeMsg:
-		m.styles.leftAlign = m.styles.leftAlign.Width(msg.Width)
-		m.styles.rightAlign = m.styles.rightAlign.Width(msg.Width)
+		//panic(spew.Sprintln(msg))
+		_ = msg
+		//m.styles = DefaultChatStyleFunc(20, 1000)
+		m.styles = m.styleFunc(msg.Width, msg.Height)
 		return m, nil
 	}
 
@@ -41,15 +46,19 @@ func (m *ChatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m *ChatModel) View() string {
 	var output string
 
-	for _, msg := range m.messages {
+	for _, msg := range m.conversation {
 		wasSentByThisUser := msg.Author == m.username
-		output += m.getChatBubble(wasSentByThisUser, msg.Content) + "\n"
+		output += m.viewChatBubble(msg.Content, wasSentByThisUser) + "\n"
 	}
 
 	return output
 }
 
-func (m *ChatModel) getChatBubble(placeOnRight bool, msg string) string {
+func (m *ChatModel) SetConversation(conversation []data.Message) {
+	m.conversation = conversation
+}
+
+func (m *ChatModel) viewChatBubble(msg string, placeOnRight bool) string {
 	var output string
 
 	switch placeOnRight {

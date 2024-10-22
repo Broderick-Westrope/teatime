@@ -1,6 +1,8 @@
 package contacts
 
 import (
+	"fmt"
+
 	"github.com/Broderick-Westrope/teatime/internal/tui"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
@@ -50,4 +52,12 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m *Model) View() string {
 	return m.list.View()
+}
+
+func (m *Model) GetSelectedContact() (*Contact, error) {
+	contact, ok := m.list.SelectedItem().(Contact)
+	if !ok {
+		return nil, fmt.Errorf("failed to get selected contact: %w", tui.ErrInvalidTypeAssertion)
+	}
+	return &contact, nil
 }

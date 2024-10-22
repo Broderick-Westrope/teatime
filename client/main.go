@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"os"
 
 	"github.com/Broderick-Westrope/teatime/internal/tui/starter"
 	"github.com/Broderick-Westrope/teatime/internal/tui/views"
@@ -9,8 +10,21 @@ import (
 )
 
 func main() {
+	var messagesLogFile *os.File
+	if _, ok := os.LookupEnv("DEBUG"); ok {
+		err := os.MkdirAll("logs", 0750)
+		if err != nil {
+			log.Fatalf("failed to create dir 'logs': %v\n", err)
+		}
+		messagesLogFile, err = os.OpenFile("logs/messages.log", os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o644)
+		if err != nil {
+			log.Fatalf("failed to create file 'logs/messages.log': %v\n", err)
+		}
+	}
+
 	m := starter.NewModel(
 		views.NewAppModel(),
+		messagesLogFile,
 	)
 
 	exitModel, err := tea.NewProgram(m, tea.WithAltScreen()).Run()

@@ -1,18 +1,23 @@
 package starter
 
 import (
+	"io"
+
 	"github.com/Broderick-Westrope/teatime/internal/tui"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/davecgh/go-spew/spew"
 )
 
 type Model struct {
-	child     tea.Model
-	ExitError error
+	child       tea.Model
+	ExitError   error
+	messagesLog io.Writer
 }
 
-func NewModel(child tea.Model) *Model {
+func NewModel(child tea.Model, messagesLog io.Writer) *Model {
 	return &Model{
-		child: child,
+		child:       child,
+		messagesLog: messagesLog,
 	}
 }
 
@@ -21,6 +26,10 @@ func (m *Model) Init() tea.Cmd {
 }
 
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if m.messagesLog != nil {
+		spew.Fdump(m.messagesLog, msg)
+	}
+
 	switch msg := msg.(type) {
 	case tui.FatalErrorMsg:
 		m.ExitError = msg

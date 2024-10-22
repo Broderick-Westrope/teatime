@@ -1,7 +1,6 @@
 package views
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/Broderick-Westrope/teatime/internal/data"
@@ -10,10 +9,6 @@ import (
 	"github.com/Broderick-Westrope/teatime/internal/tui/components/contacts"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-)
-
-var (
-	ErrInvalidTypeAssertion = errors.New("invalid type assertion")
 )
 
 type AppModel struct {
@@ -29,7 +24,12 @@ func NewAppModel() *AppModel {
 			Username: "Maynard.Adams",
 			Conversation: []data.Message{
 				{
+					Author:  "Maynard.Adams",
 					Content: "Doloribus eligendi at velit qui.",
+				},
+				{
+					Author:  "Cordia_Tromp",
+					Content: "Earum similique tempore. Ullam animi hic repudiandae. Amet id voluptas id error veritatis tenetur incidunt quidem nihil. Eius facere nostrum expedita eum.\nDucimus in temporibus non. Voluptatum enim odio cupiditate error est aspernatur eligendi. Ea iure tenetur nam. Nemo quo veritatis iusto maiores illum modi necessitatibus. Sunt minus ab.\nOfficia deserunt omnis velit aliquid facere sit. Vel rem atque. Veniam dolores corporis quasi sit deserunt minus molestias sunt.",
 				},
 			},
 		},
@@ -53,25 +53,50 @@ func NewAppModel() *AppModel {
 
 	return &AppModel{
 		contacts:      contacts.NewModel(contactItems),
-		chat:          components.NewChatModel(contactItems[0].Conversation, contactItems[0].Username),
+		chat:          components.NewChatModel(contactItems[0].Conversation, "Cordia_Tromp"),
 		chatIsFocused: false,
 		styles:        DefaultAppStyles(),
 	}
 }
 
 func (m *AppModel) Init() tea.Cmd {
-	return nil
+	var cmd tea.Cmd
+	var cmds []tea.Cmd
+
+	cmd = m.contacts.Init()
+	cmds = append(cmds, cmd)
+
+	cmd = m.chat.Init()
+	cmds = append(cmds, cmd)
+
+	return tea.Batch(cmds...)
 }
 
 func (m *AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		frameX, frameY := m.styles.View.GetFrameSize()
-		cmd, err := m.updateComponentSizes(msg.Width-frameX, msg.Height-frameY)
+		frameWidth, frameHeight := m.styles.TotalFrameSize()
+		cmd, err := m.updateComponentSizes(msg.Width-frameWidth, msg.Height-frameHeight)
 		if err != nil {
 			return m, tui.FatalErrorCmd(err)
 		}
 		return m, cmd
+
+	case tui.UpdateChatMsg:
+		contact, err := m.contacts.GetSelectedContact()
+		if err != nil {
+			return m, tui.FatalErrorCmd(err)
+		}
+		m.chat.SetConversation(contact.Conversation)
+		m.chatIsFocused = true
+		return m, nil
+
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "esc":
+			m.chatIsFocused = false
+			return m, nil
+		}
 	}
 
 	switch m.chatIsFocused {
@@ -131,7 +156,7 @@ func (m *AppModel) updateChatModel(msg tea.Msg) (tea.Cmd, error) {
 	newModel, cmd := m.chat.Update(msg)
 	m.chat, ok = newModel.(*components.ChatModel)
 	if !ok {
-		return nil, fmt.Errorf("failed to update chat model: %w", ErrInvalidTypeAssertion)
+		return nil, fmt.Errorf("failed to update chat model: %w", tui.ErrInvalidTypeAssertion)
 	}
 	return cmd, nil
 }
@@ -141,7 +166,7 @@ func (m *AppModel) updateContactsModel(msg tea.Msg) (tea.Cmd, error) {
 	newModel, cmd := m.contacts.Update(msg)
 	m.contacts, ok = newModel.(*contacts.Model)
 	if !ok {
-		return nil, fmt.Errorf("failed to update contacts model: %w", ErrInvalidTypeAssertion)
+		return nil, fmt.Errorf("failed to update contacts model: %w", tui.ErrInvalidTypeAssertion)
 	}
 	return cmd, nil
 }

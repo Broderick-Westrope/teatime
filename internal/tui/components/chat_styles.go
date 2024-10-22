@@ -9,17 +9,20 @@ type ChatStyles struct {
 	rightAlign  lipgloss.Style
 }
 
-func DefaultChatStyles() *ChatStyles {
+func DefaultChatStyleFunc(width, _ int) *ChatStyles {
 	leftBubbleBorder := lipgloss.RoundedBorder()
 	leftBubbleBorder.BottomLeft = "└"
 
 	rightBubbleBorder := lipgloss.RoundedBorder()
 	rightBubbleBorder.BottomRight = "┘"
 
+	bubbleDimensions := lipgloss.NewStyle().Width((width / 5) * 4)
+	alignDimensions := lipgloss.NewStyle().Width(width)
+
 	return &ChatStyles{
-		LeftBubble:  lipgloss.NewStyle().Border(leftBubbleBorder, true),
-		RightBubble: lipgloss.NewStyle().Border(rightBubbleBorder, true),
-		leftAlign:   lipgloss.NewStyle().AlignHorizontal(lipgloss.Left),
-		rightAlign:  lipgloss.NewStyle().AlignHorizontal(lipgloss.Right),
+		LeftBubble:  bubbleDimensions.Border(leftBubbleBorder, true),
+		RightBubble: bubbleDimensions.Border(rightBubbleBorder, true),
+		leftAlign:   alignDimensions.AlignHorizontal(lipgloss.Left),
+		rightAlign:  alignDimensions.AlignHorizontal(lipgloss.Right),
 	}
 }
