@@ -3,40 +3,29 @@ package main
 import (
 	"log"
 
+	"github.com/Broderick-Westrope/teatime/internal/tui/components"
+	"github.com/Broderick-Westrope/teatime/internal/tui/starter"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
 func main() {
-	m := &Model{}
+	msgs := []components.ChatMessage{
+		{
+			Content: "some",
+			Author:  "me",
+		},
+		{
+			Content: "thing",
+			Author:  "other",
+		},
+	}
+
+	m := starter.NewModel(
+		components.NewChatModel(msgs, "me", 50),
+	)
 
 	_, err := tea.NewProgram(m).Run()
 	if err != nil {
 		log.Fatal("alas, there's been an error")
 	}
-}
-
-type Model struct{}
-
-func NewModel() *Model {
-	return &Model{}
-}
-
-func (m *Model) Init() tea.Cmd {
-	return nil
-}
-
-func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		switch msg.String() {
-		case "q":
-			return m, tea.Quit
-		}
-	}
-
-	return m, nil
-}
-
-func (m *Model) View() string {
-	return "something"
 }
