@@ -13,7 +13,7 @@ import (
 type ChatModel struct {
 	conversation []data.Message
 	username     string
-	chatName     string
+	contactName  string
 	input        textinput.Model
 
 	styles    *ChatStyles
@@ -30,7 +30,7 @@ func NewChatModel(conversation []data.Message, username, chatName string) *ChatM
 	return &ChatModel{
 		conversation: conversation,
 		username:     username,
-		chatName:     chatName,
+		contactName:  chatName,
 		input:        input,
 
 		styleFunc: DefaultChatStyleFunc,
@@ -53,15 +53,14 @@ func (m *ChatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "enter":
 			value := m.input.Value()
-			m.conversation = append(m.conversation,
-				data.Message{
-					Content: value,
-					Author:  m.username,
-					SentAt:  time.Now(),
-				},
-			)
+			newMsg := data.Message{
+				Content: value,
+				Author:  m.username,
+				SentAt:  time.Now(),
+			}
+			m.conversation = append(m.conversation, newMsg)
 			m.input.Reset()
-			return m, nil
+			return m, tui.SendMessageCmd(m.contactName, newMsg)
 		}
 	}
 
@@ -72,7 +71,7 @@ func (m *ChatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m *ChatModel) View() string {
 	return lipgloss.JoinVertical(lipgloss.Center,
-		m.styles.Header.Render(m.chatName)+"\n",
+		m.styles.Header.Render(m.contactName)+"\n",
 		m.viewConversation(),
 		m.input.View(),
 	)
@@ -80,7 +79,7 @@ func (m *ChatModel) View() string {
 
 func (m *ChatModel) SetConversation(conversation []data.Message, chatName string) {
 	m.conversation = conversation
-	m.chatName = chatName
+	m.contactName = chatName
 }
 
 func (m *ChatModel) viewConversation() string {

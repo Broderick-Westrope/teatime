@@ -88,7 +88,7 @@ func (m *AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, cmd
 
-	case tui.UpdateChatMsg:
+	case tui.SetConversationMsg:
 		contact, err := m.contacts.GetSelectedContact()
 		if err != nil {
 			return m, tui.FatalErrorCmd(err)
@@ -96,6 +96,13 @@ func (m *AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.chat.SetConversation(contact.Conversation, contact.Username)
 		m.chatIsFocused = true
 		return m, nil
+
+	case tui.SendMessageMsg:
+		cmd, err := m.contacts.AddNewMessage(msg)
+		if err != nil {
+			return m, tui.FatalErrorCmd(err)
+		}
+		return m, cmd
 
 	case tea.KeyMsg:
 		switch msg.String() {

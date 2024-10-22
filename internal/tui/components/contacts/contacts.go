@@ -61,3 +61,28 @@ func (m *Model) GetSelectedContact() (*Contact, error) {
 	}
 	return &contact, nil
 }
+
+func (m *Model) AddNewMessage(in tui.SendMessageMsg) (tea.Cmd, error) {
+	found := false
+	items := m.list.Items()
+	for i, item := range items {
+		contact, ok := item.(Contact)
+		if !ok {
+			return nil, fmt.Errorf("failed to add new message to contacts: %v", tui.ErrInvalidTypeAssertion)
+		}
+
+		if contact.Username != in.RecipientUsername {
+			continue
+		}
+
+		found = true
+		contact.Conversation = append(contact.Conversation, in.Message)
+		items[i] = contact
+	}
+
+	if !found {
+		return nil, fmt.Errorf("failed to add new message to contacts: could not find message recipient")
+	}
+
+	return m.list.SetItems(items), nil
+}

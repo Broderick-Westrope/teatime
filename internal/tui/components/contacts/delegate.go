@@ -30,7 +30,7 @@ func NewListDelegate(keys *ListDelegateKeyMap) list.DefaultDelegate {
 		case tea.KeyMsg:
 			switch {
 			case key.Matches(msg, keys.submit):
-				return tui.UpdateChatCmd
+				return tui.SetConversationCmd
 
 			case key.Matches(msg, keys.new):
 				return m.NewStatusMessage("Creating new")

@@ -35,6 +35,12 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.ExitError = msg
 		return m, tea.Quit
 
+	case tui.SendMessageMsg:
+		// TODO: send message to recipient
+		var cmd tea.Cmd
+		m.child, cmd = m.child.Update(msg)
+		return m, cmd
+
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "q", "ctrl+c":
