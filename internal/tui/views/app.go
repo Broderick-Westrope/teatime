@@ -2,6 +2,7 @@ package views
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/Broderick-Westrope/teatime/internal/data"
 	"github.com/Broderick-Westrope/teatime/internal/tui"
@@ -19,6 +20,9 @@ type AppModel struct {
 }
 
 func NewAppModel() *AppModel {
+	time1, _ := time.Parse(time.RFC1123, "Sun, 12 Dec 2021 12:23:00 UTC")
+	time2, _ := time.Parse(time.RFC1123, "Sun, 13 Dec 2021 12:23:00 UTC")
+
 	contactItems := []contacts.Contact{
 		{
 			Username: "Maynard.Adams",
@@ -26,10 +30,12 @@ func NewAppModel() *AppModel {
 				{
 					Author:  "Maynard.Adams",
 					Content: "Doloribus eligendi at velit qui.",
+					SentAt:  time1,
 				},
 				{
 					Author:  "Cordia_Tromp",
 					Content: "Earum similique tempore. Ullam animi hic repudiandae. Amet id voluptas id error veritatis tenetur incidunt quidem nihil. Eius facere nostrum expedita eum.\nDucimus in temporibus non. Voluptatum enim odio cupiditate error est aspernatur eligendi. Ea iure tenetur nam. Nemo quo veritatis iusto maiores illum modi necessitatibus. Sunt minus ab.\nOfficia deserunt omnis velit aliquid facere sit. Vel rem atque. Veniam dolores corporis quasi sit deserunt minus molestias sunt.",
+					SentAt:  time2,
 				},
 			},
 		},

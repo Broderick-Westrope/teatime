@@ -1,6 +1,8 @@
 package components
 
 import (
+	"time"
+
 	"github.com/Broderick-Westrope/teatime/internal/data"
 	"github.com/Broderick-Westrope/teatime/internal/tui"
 	tea "github.com/charmbracelet/bubbletea"
@@ -42,12 +44,27 @@ func (m *ChatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m *ChatModel) View() string {
 	var output string
-
-	for _, msg := range m.conversation {
+	for i, msg := range m.conversation {
 		wasSentByThisUser := msg.Author == m.username
-		output += m.viewChatBubble(msg.Content, wasSentByThisUser) + "\n"
-	}
+		bubble := m.viewChatBubble(msg.Content, wasSentByThisUser)
 
+		if i == 0 {
+			output += m.viewTimestamp(msg.SentAt)
+			output += bubble
+			continue
+		}
+
+		prevMsg := m.conversation[i-1]
+
+		switch {
+		case msg.SentAt.Sub(prevMsg.SentAt).Hours() > 12:
+			fallthrough
+		case msg.SentAt.Sub(prevMsg.SentAt).Hours() > 3 &&
+			prevMsg.SentAt.Day() < msg.SentAt.Day():
+			output += m.viewTimestamp(msg.SentAt)
+			output += bubble
+		}
+	}
 	return output
 }
 
@@ -68,5 +85,30 @@ func (m *ChatModel) viewChatBubble(msg string, placeOnRight bool) string {
 		output = m.styles.leftAlign.Render(output)
 	}
 
-	return output
+	return output + "\n"
+}
+
+func (m *ChatModel) viewTimestamp(sentAt time.Time) string {
+	var output string
+
+	switch {
+	case time.Now().YearDay()-sentAt.YearDay() == 0:
+		output += "Today " + sentAt.Format("6:00 AM")
+
+	case time.Now().YearDay()-sentAt.YearDay() == 1:
+		output += "Yesterday " + sentAt.Format("6:00 AM")
+
+	case time.Now().YearDay()-sentAt.YearDay() < 7:
+		output += sentAt.Format("Monday 6:00 AM")
+
+	case time.Now().Year()-sentAt.Year() == 0:
+		output += sentAt.Format("Mon, 02 Jan at 6:00 AM")
+
+	default:
+		output += sentAt.Format("Mon, 02 Jan 2006 at 6:00 AM")
+	}
+
+	output = m.styles.Timestamp.Render(output)
+
+	return output + "\n"
 }
