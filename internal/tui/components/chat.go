@@ -33,9 +33,6 @@ func (m *ChatModel) Init() tea.Cmd {
 func (m *ChatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tui.ComponentSizeMsg:
-		//panic(spew.Sprintln(msg))
-		_ = msg
-		//m.styles = DefaultChatStyleFunc(20, 1000)
 		m.styles = m.styleFunc(msg.Width, msg.Height)
 		return m, nil
 	}
