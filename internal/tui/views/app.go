@@ -126,7 +126,7 @@ func (m *AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m *AppModel) View() string {
 	var output string
-	output = lipgloss.JoinHorizontal(lipgloss.Top,
+	output = lipgloss.JoinHorizontal(lipgloss.Center,
 		m.styles.Contacts.Render(m.contacts.View()),
 		m.styles.Chat.Render(m.chat.View()),
 	)

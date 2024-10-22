@@ -12,3 +12,5 @@ type FatalErrorMsg error
 
 // UpdateChatMsg signifies a need to update the chat to use the conversation of the currently selected contact.
 type UpdateChatMsg struct{}
+
+type DebugLogMsg string

@@ -13,3 +13,9 @@ func FatalErrorCmd(err error) tea.Cmd {
 func UpdateChatCmd() tea.Msg {
 	return UpdateChatMsg{}
 }
+
+func DebugLogCmd(value string) tea.Cmd {
+	return func() tea.Msg {
+		return DebugLogMsg(value)
+	}
+}
