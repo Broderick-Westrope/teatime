@@ -8,6 +8,8 @@ import (
 	"github.com/davecgh/go-spew/spew"
 )
 
+var _ tea.Model = &Model{}
+
 type Model struct {
 	child       tea.Model
 	ExitError   error
@@ -43,7 +45,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "q", "ctrl+c":
+		case "ctrl+c":
 			return m, tea.Quit
 		}
 	}

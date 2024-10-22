@@ -10,6 +10,8 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
+var _ tea.Model = &ChatModel{}
+
 type ChatModel struct {
 	conversation []data.Message
 	username     string
@@ -58,6 +60,9 @@ func (m *ChatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "enter":
 			value := m.input.Value()
+			if len(value) == 0 {
+				return m, nil
+			}
 			newMsg := data.Message{
 				Content: value,
 				Author:  m.username,
@@ -140,4 +145,8 @@ func (m *ChatModel) viewTimestamp(sentAt time.Time) string {
 func (m *ChatModel) SwitchStyleFunc(styleFunc ChatStyleFunc) {
 	m.styles = styleFunc(m.styles.Width, m.styles.Height)
 	m.styleFunc = styleFunc
+}
+
+func (m *ChatModel) ResetInput() {
+	m.input.Reset()
 }

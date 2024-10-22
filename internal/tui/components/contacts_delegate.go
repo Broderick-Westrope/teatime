@@ -1,4 +1,4 @@
-package contacts
+package components
 
 import (
 	"github.com/Broderick-Westrope/teatime/internal/data"
@@ -14,8 +14,14 @@ func (c Contact) Title() string       { return c.Username }
 func (c Contact) Description() string { return c.Conversation[len(c.Conversation)-1].Content }
 func (c Contact) FilterValue() string { return c.Username }
 
-func NewListDelegate(keys *ListDelegateKeyMap) list.DefaultDelegate {
+func NewListDelegate(keys *ListDelegateKeyMap, styles list.DefaultItemStyles) list.DefaultDelegate {
 	d := list.NewDefaultDelegate()
+	d.Styles = styles
+
+	d.ShortHelpFunc = keys.ShortHelp
+	d.FullHelpFunc = func() [][]key.Binding {
+		return [][]key.Binding{keys.ShortHelp()}
+	}
 
 	d.UpdateFunc = func(msg tea.Msg, m *list.Model) tea.Cmd {
 		var selectedUsername string
@@ -43,15 +49,8 @@ func NewListDelegate(keys *ListDelegateKeyMap) list.DefaultDelegate {
 				return m.NewStatusMessage("Deleted " + selectedUsername)
 			}
 		}
-
 		return nil
 	}
-
-	d.ShortHelpFunc = keys.ShortHelp
-	d.FullHelpFunc = func() [][]key.Binding {
-		return [][]key.Binding{keys.ShortHelp()}
-	}
-
 	return d
 }
 

@@ -7,13 +7,14 @@ import (
 	"github.com/Broderick-Westrope/teatime/internal/data"
 	"github.com/Broderick-Westrope/teatime/internal/tui"
 	"github.com/Broderick-Westrope/teatime/internal/tui/components"
-	"github.com/Broderick-Westrope/teatime/internal/tui/components/contacts"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
 
+var _ tea.Model = &AppModel{}
+
 type AppModel struct {
-	contacts      *contacts.Model
+	contacts      *components.ContactsModel
 	chat          *components.ChatModel
 	chatIsFocused bool
 	styles        *AppStyles
@@ -23,7 +24,7 @@ func NewAppModel() *AppModel {
 	time1, _ := time.Parse(time.RFC1123, "Sun, 12 Dec 2021 12:23:00 UTC")
 	time2, _ := time.Parse(time.RFC1123, "Sun, 13 Dec 2021 12:23:00 UTC")
 
-	contactItems := []contacts.Contact{
+	contactItems := []components.Contact{
 		{
 			Username: "Maynard.Adams",
 			Conversation: []data.Message{
@@ -58,7 +59,7 @@ func NewAppModel() *AppModel {
 	}
 
 	return &AppModel{
-		contacts:      contacts.NewModel(contactItems),
+		contacts:      components.NewContactsModel(contactItems, true),
 		chat:          components.NewChatModel(contactItems[0].Conversation, "Cordia_Tromp", contactItems[0].Username, false),
 		chatIsFocused: false,
 		styles:        DefaultAppStyles(),
@@ -96,6 +97,7 @@ func (m *AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.chat.SetConversation(contact.Conversation, contact.Username)
 		m.chatIsFocused = true
 		m.chat.SwitchStyleFunc(components.EnabledChatStyleFunc)
+		m.contacts.SwitchStyles(components.DisabledContactsStyles())
 		return m, nil
 
 	case tui.SendMessageMsg:
@@ -110,7 +112,15 @@ func (m *AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "esc":
 			m.chatIsFocused = false
 			m.chat.SwitchStyleFunc(components.DisabledStyleFunc)
+			m.chat.ResetInput()
+			m.contacts.SwitchStyles(components.EnabledContactsStyles())
 			return m, nil
+
+		case "q":
+			if m.chatIsFocused {
+				break
+			}
+			return m, tea.Quit
 		}
 	}
 
@@ -179,7 +189,7 @@ func (m *AppModel) updateChatModel(msg tea.Msg) (tea.Cmd, error) {
 func (m *AppModel) updateContactsModel(msg tea.Msg) (tea.Cmd, error) {
 	var ok bool
 	newModel, cmd := m.contacts.Update(msg)
-	m.contacts, ok = newModel.(*contacts.Model)
+	m.contacts, ok = newModel.(*components.ContactsModel)
 	if !ok {
 		return nil, fmt.Errorf("failed to update contacts model: %w", tui.ErrInvalidTypeAssertion)
 	}

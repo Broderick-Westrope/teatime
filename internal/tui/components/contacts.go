@@ -1,4 +1,4 @@
-package contacts
+package components
 
 import (
 	"fmt"
@@ -8,32 +8,41 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-var _ tea.Model = &Model{}
+var _ tea.Model = &ContactsModel{}
 
-type Model struct {
-	list list.Model
+type ContactsModel struct {
+	list   list.Model
+	Styles *ContactsStyles
 }
 
-func NewModel(contacts []Contact) *Model {
+func NewContactsModel(contacts []Contact, enabled bool) *ContactsModel {
 	var items = make([]list.Item, len(contacts))
 	for i, d := range contacts {
 		items[i] = d
 	}
 
-	delegate := NewListDelegate(DefaultListDelegateKeyMap())
+	styles := DisabledContactsStyles()
+	if enabled {
+		styles = EnabledContactsStyles()
+	}
+
+	delegate := NewListDelegate(DefaultListDelegateKeyMap(), styles.ListItem)
 	contactList := list.New(items, delegate, 0, 0)
 	contactList.Title = "Contacts"
 
-	return &Model{
+	m := &ContactsModel{
 		list: contactList,
 	}
+	m.SwitchStyles(styles)
+
+	return m
 }
 
-func (m *Model) Init() tea.Cmd {
+func (m *ContactsModel) Init() tea.Cmd {
 	return nil
 }
 
-func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m *ContactsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tui.ComponentSizeMsg:
 		m.list.SetSize(msg.Width, msg.Height)
@@ -50,11 +59,11 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m *Model) View() string {
+func (m *ContactsModel) View() string {
 	return m.list.View()
 }
 
-func (m *Model) GetSelectedContact() (*Contact, error) {
+func (m *ContactsModel) GetSelectedContact() (*Contact, error) {
 	contact, ok := m.list.SelectedItem().(Contact)
 	if !ok {
 		return nil, fmt.Errorf("failed to get selected contact: %w", tui.ErrInvalidTypeAssertion)
@@ -62,7 +71,7 @@ func (m *Model) GetSelectedContact() (*Contact, error) {
 	return &contact, nil
 }
 
-func (m *Model) AddNewMessage(in tui.SendMessageMsg) (tea.Cmd, error) {
+func (m *ContactsModel) AddNewMessage(in tui.SendMessageMsg) (tea.Cmd, error) {
 	found := false
 	items := m.list.Items()
 	for i, item := range items {
@@ -85,4 +94,10 @@ func (m *Model) AddNewMessage(in tui.SendMessageMsg) (tea.Cmd, error) {
 	}
 
 	return m.list.SetItems(items), nil
+}
+
+func (m *ContactsModel) SwitchStyles(styles *ContactsStyles) {
+	m.Styles = styles
+	m.list.Styles = styles.List
+	m.list.SetDelegate(NewListDelegate(DefaultListDelegateKeyMap(), styles.ListItem))
 }
