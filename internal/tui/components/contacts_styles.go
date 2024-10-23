@@ -4,19 +4,19 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 )
 
-type ContactsStyles struct {
+type contactsStyles struct {
 	List     list.Styles
 	ListItem list.DefaultItemStyles
 }
 
-func EnabledContactsStyles() *ContactsStyles {
-	return &ContactsStyles{
+func enabledContactsStyles() *contactsStyles {
+	return &contactsStyles{
 		List:     list.DefaultStyles(),
 		ListItem: list.NewDefaultItemStyles(),
 	}
 }
 
-func DisabledContactsStyles() *ContactsStyles {
+func disabledContactsStyles() *contactsStyles {
 	listStyles := list.DefaultStyles()
 	listStyles.Title = listStyles.Title.UnsetBackground()
 
@@ -32,7 +32,7 @@ func DisabledContactsStyles() *ContactsStyles {
 	itemStyles.NormalTitle = itemStyles.DimmedTitle
 	itemStyles.NormalDesc = itemStyles.DimmedDesc
 
-	return &ContactsStyles{
+	return &contactsStyles{
 		List:     listStyles,
 		ListItem: itemStyles,
 	}

@@ -2,7 +2,6 @@ package views
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/Broderick-Westrope/teatime/internal/data"
 	"github.com/Broderick-Westrope/teatime/internal/tui"
@@ -11,65 +10,30 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
+// An appFocusRegion is an enum representing a top-level component within the app
+// which can become the focus of user navigation. Each value corresponds to a child model.
+type appFocusRegion int
+
+const (
+	appFocusRegionContacts appFocusRegion = iota
+	appFocusRegionChat
+)
+
 var _ tea.Model = &AppModel{}
 
 type AppModel struct {
 	contacts *components.ContactsModel
 	chat     *components.ChatModel
-	focus    FocusRegion
+	focus    appFocusRegion
 	styles   *AppStyles
+	username string
 }
 
-type FocusRegion int
-
-const (
-	FocusRegionContacts FocusRegion = iota
-	FocusRegionChat
-)
-
-func NewAppModel() *AppModel {
-	time1, _ := time.Parse(time.RFC1123, "Sun, 12 Dec 2021 12:23:00 UTC")
-	time2, _ := time.Parse(time.RFC1123, "Sun, 13 Dec 2021 12:23:00 UTC")
-
-	contactItems := []components.Contact{
-		{
-			Username: "Maynard.Adams",
-			Conversation: []data.Message{
-				{
-					Author:  "Maynard.Adams",
-					Content: "Doloribus eligendi at velit qui.",
-					SentAt:  time1,
-				},
-				{
-					Author:  "Cordia_Tromp",
-					Content: "Earum similique tempore. Ullam animi hic repudiandae. Amet id voluptas id error veritatis tenetur incidunt quidem nihil. Eius facere nostrum expedita eum.\nDucimus in temporibus non. Voluptatum enim odio cupiditate error est aspernatur eligendi. Ea iure tenetur nam. Nemo quo veritatis iusto maiores illum modi necessitatibus. Sunt minus ab.\nOfficia deserunt omnis velit aliquid facere sit. Vel rem atque. Veniam dolores corporis quasi sit deserunt minus molestias sunt.",
-					SentAt:  time2,
-				},
-			},
-		},
-		{
-			Username: "Sherwood27",
-			Conversation: []data.Message{
-				{
-					Content: "provident nesciunt sit",
-				},
-			},
-		},
-		{
-			Username: "Elda48",
-			Conversation: []data.Message{
-				{
-					Content: "Nulla eaque molestias molestiae porro iusto. Laboriosam sequi laborum autem harum iste ex. Autem minus pariatur soluta voluptatum. Quis dolores cumque atque quisquam unde. Aliquid officia veritatis nihil voluptate dolorum. Delectus recusandae natus ratione animi.\nQuasi unde dolor modi est libero quo quam iste eum. Itaque facere dolore dignissimos placeat. Cumque magni quia reprehenderit voluptas sequi voluptatum reprehenderit.\nAsperiores dolorum eum animi tempora laudantium autem. Omnis quidem atque laboriosam maiores laudantium. Fuga possimus mollitia amet adipisci rerum. Excepturi blanditiis libero modi harum sed.",
-				},
-			},
-		},
-	}
-
-	focus := FocusRegionContacts
-
+func NewAppModel(contacts []data.Contact, username string) *AppModel {
+	focus := appFocusRegionContacts
 	return &AppModel{
-		contacts: components.NewContactsModel(contactItems, focus == FocusRegionContacts),
-		chat:     components.NewChatModel(contactItems[0].Conversation, "Cordia_Tromp", contactItems[0].Username, focus == FocusRegionChat),
+		contacts: components.NewContactsModel(contacts, focus == appFocusRegionContacts),
+		chat:     components.NewChatModel(contacts[0].Conversation, username, contacts[0].Username, focus == appFocusRegionChat),
 		focus:    focus,
 		styles:   DefaultAppStyles(),
 	}
@@ -91,23 +55,17 @@ func (m *AppModel) Init() tea.Cmd {
 func (m *AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		frameWidth, frameHeight := m.styles.TotalFrameSize()
-		cmd, err := m.updateComponentSizes(msg.Width-frameWidth, msg.Height-frameHeight)
-		if err != nil {
-			return m, tui.FatalErrorCmd(err)
-		}
-		return m, cmd
+		m.setSize(msg.Width, msg.Height)
+		return m, nil
 
 	case tui.SetConversationMsg:
-		contact, err := m.contacts.GetSelectedContact()
+		// setFocus needs to be called before SetConversation since
+		// the styling needs to be updated before the viewport is refreshed
+		err := m.setFocus(appFocusRegionChat)
 		if err != nil {
 			return m, tui.FatalErrorCmd(err)
 		}
-		m.chat.SetConversation(contact.Conversation, contact.Username)
-		err = m.setFocus(FocusRegionChat)
-		if err != nil {
-			return m, tui.FatalErrorCmd(err)
-		}
+		m.chat.SetConversation(msg.Conversation, msg.Username)
 		return m, nil
 
 	case tui.SendMessageMsg:
@@ -121,10 +79,10 @@ func (m *AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "esc":
 			// move from chat to contacts
-			if m.focus != FocusRegionChat {
+			if m.focus != appFocusRegionChat {
 				break
 			}
-			err := m.setFocus(FocusRegionContacts)
+			err := m.setFocus(appFocusRegionContacts)
 			if err != nil {
 				return m, tui.FatalErrorCmd(err)
 			}
@@ -132,8 +90,8 @@ func (m *AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 
 		case "q":
-			// quit unless typing "q" in the chat
-			if m.focus == FocusRegionChat {
+			// don't quit if the user types "q" in the chat
+			if m.focus == appFocusRegionChat {
 				break
 			}
 			return m, tea.Quit
@@ -147,85 +105,52 @@ func (m *AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
+// updateFocussedChild uses the model state to determine which child model to update.
+// An error is only returned when an unknown appFocusRegion is provided.
+func (m *AppModel) updateFocussedChild(msg tea.Msg) (tea.Cmd, error) {
+	switch m.focus {
+	case appFocusRegionContacts:
+		return tui.UpdateTypedModel(&m.contacts, msg)
+	case appFocusRegionChat:
+		return tui.UpdateTypedModel(&m.chat, msg)
+	default:
+		return nil, fmt.Errorf("unknown appFocusRegion %d", m.focus)
+	}
+}
+
+// setFocus enables/disables the child models depending on the provided appFocusRegion and updates the model state.
+// An error is only returned when an unknown appFocusRegion is provided.
+func (m *AppModel) setFocus(focus appFocusRegion) error {
+	switch focus {
+	case appFocusRegionContacts:
+		m.contacts.Enable()
+		m.chat.Disable()
+	case appFocusRegionChat:
+		m.chat.Enable()
+		m.contacts.Disable()
+	default:
+		return fmt.Errorf("unknown appFocusRegion %d", focus)
+	}
+	m.focus = focus
+	return nil
+}
+
+// setSize updates calculates and updates the size of the child models taking into account frame sizes.
+func (m *AppModel) setSize(windowWidth, windowHeight int) {
+	frameWidth, frameHeight := m.styles.TotalFrameSize()
+	width, height := windowWidth-frameWidth, windowHeight-frameHeight
+
+	contactsWidth := min(width/3, 35)
+	chatWidth := width - contactsWidth
+
+	m.contacts.SetSize(contactsWidth, height)
+	m.chat.SetSize(chatWidth, height)
+}
+
 func (m *AppModel) View() string {
-	var output string
-	output = lipgloss.JoinHorizontal(lipgloss.Center,
+	output := lipgloss.JoinHorizontal(lipgloss.Center,
 		m.styles.Contacts.Render(m.contacts.View()),
 		m.styles.Chat.Render(m.chat.View()),
 	)
 	return m.styles.View.Render(output)
-}
-
-func (m *AppModel) updateFocussedChild(msg tea.Msg) (tea.Cmd, error) {
-	switch m.focus {
-	case FocusRegionContacts:
-		return m.updateContactsModel(msg)
-
-	case FocusRegionChat:
-		return m.updateChatModel(msg)
-
-	default:
-		return nil, fmt.Errorf("unknown FocusRegion %d", m.focus)
-	}
-}
-
-func (m *AppModel) updateComponentSizes(width, height int) (tea.Cmd, error) {
-	var cmds []tea.Cmd
-
-	cmd, err := m.updateContactsModel(tui.ComponentSizeMsg{
-		Width:  width / 3,
-		Height: height,
-	})
-	if err != nil {
-		return nil, err
-	}
-	cmds = append(cmds, cmd)
-
-	cmd, err = m.updateChatModel(tui.ComponentSizeMsg{
-		Width:  (width / 3) * 2,
-		Height: height,
-	})
-	if err != nil {
-		return nil, err
-	}
-	cmds = append(cmds, cmd)
-
-	return tea.Batch(cmd), nil
-}
-
-func (m *AppModel) updateChatModel(msg tea.Msg) (tea.Cmd, error) {
-	var ok bool
-	newModel, cmd := m.chat.Update(msg)
-	m.chat, ok = newModel.(*components.ChatModel)
-	if !ok {
-		return nil, fmt.Errorf("failed to update chat model: %w", tui.ErrInvalidTypeAssertion)
-	}
-	return cmd, nil
-}
-
-func (m *AppModel) updateContactsModel(msg tea.Msg) (tea.Cmd, error) {
-	var ok bool
-	newModel, cmd := m.contacts.Update(msg)
-	m.contacts, ok = newModel.(*components.ContactsModel)
-	if !ok {
-		return nil, fmt.Errorf("failed to update contacts model: %w", tui.ErrInvalidTypeAssertion)
-	}
-	return cmd, nil
-}
-
-func (m *AppModel) setFocus(focus FocusRegion) error {
-	switch focus {
-	case FocusRegionContacts:
-		m.chat.SwitchStyleFunc(components.DisabledChatStyleFunc)
-		m.contacts.SwitchStyles(components.EnabledContactsStyles())
-
-	case FocusRegionChat:
-		m.chat.SwitchStyleFunc(components.EnabledChatStyleFunc)
-		m.contacts.SwitchStyles(components.DisabledContactsStyles())
-
-	default:
-		return fmt.Errorf("unknown FocusRegion %d", focus)
-	}
-	m.focus = focus
-	return nil
 }

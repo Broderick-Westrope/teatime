@@ -3,7 +3,7 @@ package data
 import "time"
 
 type Message struct {
-	Content string
-	Author  string
-	SentAt  time.Time
+	Content string    `json:"content"`
+	Author  string    `json:"author"`
+	SentAt  time.Time `json:"sent_at"`
 }

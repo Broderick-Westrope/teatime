@@ -3,6 +3,7 @@ package components
 import (
 	"fmt"
 
+	"github.com/Broderick-Westrope/teatime/internal/data"
 	"github.com/Broderick-Westrope/teatime/internal/tui"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
@@ -12,18 +13,18 @@ var _ tea.Model = &ContactsModel{}
 
 type ContactsModel struct {
 	list   list.Model
-	styles *ContactsStyles
+	styles *contactsStyles
 }
 
-func NewContactsModel(contacts []Contact, enabled bool) *ContactsModel {
+func NewContactsModel(contacts []data.Contact, enabled bool) *ContactsModel {
 	var items = make([]list.Item, len(contacts))
 	for i, d := range contacts {
-		items[i] = d
+		items[i] = Contact(d)
 	}
 
-	styles := DisabledContactsStyles()
+	styles := disabledContactsStyles()
 	if enabled {
-		styles = EnabledContactsStyles()
+		styles = enabledContactsStyles()
 	}
 
 	delegate := NewListDelegate(DefaultListDelegateKeyMap(), styles.ListItem)
@@ -37,16 +38,12 @@ func NewContactsModel(contacts []Contact, enabled bool) *ContactsModel {
 }
 
 func (m *ContactsModel) Init() tea.Cmd {
-	m.SwitchStyles(m.styles)
+	m.switchStyles(m.styles)
 	return nil
 }
 
 func (m *ContactsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tui.ComponentSizeMsg:
-		m.list.SetSize(msg.Width, msg.Height)
-		return m, nil
-
+	switch msg.(type) {
 	case tea.KeyMsg:
 		if m.list.FilterState() == list.Filtering {
 			break
@@ -71,7 +68,7 @@ func (m *ContactsModel) GetSelectedContact() (*Contact, error) {
 }
 
 func (m *ContactsModel) AddNewMessage(in tui.SendMessageMsg) (tea.Cmd, error) {
-	found := false
+	foundIdx := -1
 	items := m.list.Items()
 	for i, item := range items {
 		contact, ok := item.(Contact)
@@ -83,20 +80,38 @@ func (m *ContactsModel) AddNewMessage(in tui.SendMessageMsg) (tea.Cmd, error) {
 			continue
 		}
 
-		found = true
+		foundIdx = i
 		contact.Conversation = append(contact.Conversation, in.Message)
 		items[i] = contact
+		break
 	}
 
-	if !found {
+	switch {
+	case foundIdx < 0:
 		return nil, fmt.Errorf("failed to add new message to contacts: could not find message recipient")
+	case foundIdx != 0:
+		item := items[foundIdx]
+		items = append(items[:foundIdx], items[foundIdx+1:]...)
+		items = append([]list.Item{item}, items...)
+		m.list.Select(0)
 	}
-
 	return m.list.SetItems(items), nil
 }
 
-func (m *ContactsModel) SwitchStyles(styles *ContactsStyles) {
+func (m *ContactsModel) Enable() {
+	m.switchStyles(enabledContactsStyles())
+}
+
+func (m *ContactsModel) Disable() {
+	m.switchStyles(disabledContactsStyles())
+}
+
+func (m *ContactsModel) switchStyles(styles *contactsStyles) {
 	m.styles = styles
 	m.list.Styles = styles.List
 	m.list.SetDelegate(NewListDelegate(DefaultListDelegateKeyMap(), styles.ListItem))
+}
+
+func (m *ContactsModel) SetSize(width, height int) {
+	m.list.SetSize(width, height)
 }

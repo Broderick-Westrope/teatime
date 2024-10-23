@@ -1,6 +1,8 @@
 package components
 
 import (
+	"fmt"
+
 	"github.com/Broderick-Westrope/teatime/internal/data"
 	"github.com/Broderick-Westrope/teatime/internal/tui"
 	"github.com/charmbracelet/bubbles/key"
@@ -24,19 +26,19 @@ func NewListDelegate(keys *ListDelegateKeyMap, styles list.DefaultItemStyles) li
 	}
 
 	d.UpdateFunc = func(msg tea.Msg, m *list.Model) tea.Cmd {
-		var selectedUsername string
-
-		if i, ok := m.SelectedItem().(Contact); ok {
-			selectedUsername = i.Username
-		} else {
-			return nil
+		contact, ok := m.SelectedItem().(Contact)
+		if !ok {
+			return tui.FatalErrorCmd(fmt.Errorf(
+				"list delegate failed to get selected item: %w",
+				tui.ErrInvalidTypeAssertion,
+			))
 		}
 
 		switch msg := msg.(type) {
 		case tea.KeyMsg:
 			switch {
 			case key.Matches(msg, keys.submit):
-				return tui.SetConversationCmd
+				return tui.SetConversationCmd(data.Contact(contact))
 
 			case key.Matches(msg, keys.new):
 				return m.NewStatusMessage("Creating new")
@@ -49,7 +51,7 @@ func NewListDelegate(keys *ListDelegateKeyMap, styles list.DefaultItemStyles) li
 				if len(m.Items()) == 0 {
 					keys.delete.SetEnabled(false)
 				}
-				return m.NewStatusMessage("Deleted " + selectedUsername)
+				return m.NewStatusMessage("Deleted " + contact.Username)
 			}
 		}
 		return nil

@@ -6,6 +6,7 @@ import (
 	"github.com/Broderick-Westrope/teatime/internal/data"
 	"github.com/Broderick-Westrope/teatime/internal/tui"
 	"github.com/charmbracelet/bubbles/textinput"
+	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -17,9 +18,10 @@ type ChatModel struct {
 	username     string
 	contactName  string
 	input        textinput.Model
+	vp           viewport.Model
 
-	styles    *ChatStyles
-	styleFunc func(width, height int) *ChatStyles
+	styles    *chatStyles
+	styleFunc func(width, height int) *chatStyles
 }
 
 // NewChatModel creates a new ChatModel.
@@ -29,9 +31,9 @@ func NewChatModel(conversation []data.Message, username, chatName string, enable
 	input := textinput.New()
 	input.Placeholder = "Message"
 
-	styleFunc := DisabledChatStyleFunc
+	styleFunc := disabledChatStyleFunc
 	if enabled {
-		styleFunc = EnabledChatStyleFunc
+		styleFunc = enabledChatStyleFunc
 	}
 
 	return &ChatModel{
@@ -46,17 +48,21 @@ func NewChatModel(conversation []data.Message, username, chatName string, enable
 }
 
 func (m *ChatModel) Init() tea.Cmd {
-	m.SwitchStyleFunc(m.styleFunc)
-	return m.input.Focus()
+	m.switchStyleFunc(m.styleFunc)
+
+	m.vp = viewport.New(0, 0)
+	// TODO: derive this position
+	m.vp.YPosition = lipgloss.Height(m.viewHeader())
+	m.updateViewportContent()
+
+	return tea.Batch(
+		m.input.Focus(),
+		m.vp.Init(),
+	)
 }
 
 func (m *ChatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
-	case tui.ComponentSizeMsg:
-		m.styles = m.styleFunc(msg.Width, msg.Height)
-		m.input.Width = msg.Width
-		return m, nil
-
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "enter":
@@ -70,20 +76,26 @@ func (m *ChatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				SentAt:  time.Now(),
 			}
 			m.conversation = append(m.conversation, newMsg)
+			m.updateViewportContent()
 			m.input.Reset()
 			return m, tui.SendMessageCmd(m.contactName, newMsg)
 		}
 	}
 
 	var cmd tea.Cmd
+	var cmds []tea.Cmd
 	m.input, cmd = m.input.Update(msg)
-	return m, cmd
+	cmds = append(cmds, cmd)
+	m.vp, cmd = m.vp.Update(msg)
+	cmds = append(cmds, cmd)
+
+	return m, tea.Batch(cmds...)
 }
 
 func (m *ChatModel) View() string {
 	return lipgloss.JoinVertical(lipgloss.Center,
-		m.styles.Header.Render(m.contactName)+"\n",
-		m.viewConversation(),
+		m.viewHeader(),
+		m.vp.View(),
 		m.input.View(),
 	)
 }
@@ -91,6 +103,11 @@ func (m *ChatModel) View() string {
 func (m *ChatModel) SetConversation(conversation []data.Message, chatName string) {
 	m.conversation = conversation
 	m.contactName = chatName
+	m.updateViewportContent()
+}
+
+func (m *ChatModel) viewHeader() string {
+	return m.styles.Header.Render(m.contactName) + "\n"
 }
 
 func (m *ChatModel) viewConversation() string {
@@ -143,7 +160,17 @@ func (m *ChatModel) viewTimestamp(sentAt time.Time) string {
 	return m.styles.Timestamp.Render(output) + "\n"
 }
 
-func (m *ChatModel) SwitchStyleFunc(styleFunc ChatStyleFunc) {
+func (m *ChatModel) Enable() {
+	m.switchStyleFunc(enabledChatStyleFunc)
+	m.updateViewportContent()
+}
+
+func (m *ChatModel) Disable() {
+	m.switchStyleFunc(disabledChatStyleFunc)
+	m.updateViewportContent()
+}
+
+func (m *ChatModel) switchStyleFunc(styleFunc chatStyleFunc) {
 	m.styles = styleFunc(m.styles.Width, m.styles.Height)
 	m.styleFunc = styleFunc
 
@@ -156,4 +183,20 @@ func (m *ChatModel) SwitchStyleFunc(styleFunc ChatStyleFunc) {
 
 func (m *ChatModel) ResetInput() {
 	m.input.Reset()
+}
+
+func (m *ChatModel) updateViewportContent() {
+	m.vp.SetContent(m.viewConversation())
+	m.vp.GotoBottom()
+}
+
+func (m *ChatModel) SetSize(width, height int) {
+	m.styles = m.styleFunc(width, height)
+	m.input.Width = width - (lipgloss.Width(m.input.Prompt) + lipgloss.Width(m.input.Cursor.View()))
+
+	// TODO: derive this margin
+	const verticalMargin = 6
+	m.vp.Width = width
+	m.vp.Height = height - verticalMargin
+	m.updateViewportContent()
 }

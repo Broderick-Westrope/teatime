@@ -2,7 +2,7 @@ package components
 
 import "github.com/charmbracelet/lipgloss"
 
-type ChatStyles struct {
+type chatStyles struct {
 	Width  int
 	Height int
 
@@ -22,7 +22,7 @@ type ChatStyles struct {
 	rightBubbleBorder lipgloss.Border
 }
 
-type ChatStyleFunc func(width, height int) *ChatStyles
+type chatStyleFunc func(width, height int) *chatStyles
 
 var (
 	leftBubbleBorder = lipgloss.Border{
@@ -57,15 +57,15 @@ var (
 	}
 )
 
-func EnabledChatStyleFunc(width, height int) *ChatStyles {
+func enabledChatStyleFunc(width, height int) *chatStyles {
 	leftBubble := lipgloss.NewStyle().Padding(0, 1).Border(leftBubbleBorder, true).BorderForeground(lipgloss.Color("6"))
 	rightBubble := lipgloss.NewStyle().Padding(0, 1).Border(rightBubbleBorder, true).BorderForeground(lipgloss.Color("5"))
 	fullWidth := lipgloss.NewStyle().Width(width)
 	leftAlign := fullWidth.AlignHorizontal(lipgloss.Left)
 	rightAlign := fullWidth.AlignHorizontal(lipgloss.Right)
-	bubbleMaxWidth := (width / 5) * 4
+	bubbleMaxWidth := (width / 10) * 7
 
-	return &ChatStyles{
+	return &chatStyles{
 		Width:  width,
 		Height: height,
 
@@ -97,8 +97,8 @@ func EnabledChatStyleFunc(width, height int) *ChatStyles {
 	}
 }
 
-func DisabledChatStyleFunc(width, height int) *ChatStyles {
-	styles := EnabledChatStyleFunc(width, height)
+func disabledChatStyleFunc(width, height int) *chatStyles {
+	styles := enabledChatStyleFunc(width, height)
 
 	disabledForeground := lipgloss.NewStyle().Foreground(lipgloss.Color("240")).BorderForeground(lipgloss.Color("240"))
 
@@ -110,7 +110,7 @@ func DisabledChatStyleFunc(width, height int) *ChatStyles {
 	fullWidth := lipgloss.NewStyle().Width(width).Inherit(disabledForeground)
 	leftAlign := fullWidth.AlignHorizontal(lipgloss.Left)
 	rightAlign := fullWidth.AlignHorizontal(lipgloss.Right)
-	bubbleMaxWidth := (width / 5) * 4
+	bubbleMaxWidth := (width / 10) * 7
 
 	styles.BubbleStyleFunc = func(value string, alignRight bool, textLen int) string {
 		value = lipgloss.NewStyle().Width(min(textLen, bubbleMaxWidth)).Inherit(disabledForeground).Render(value)

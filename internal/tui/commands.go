@@ -13,8 +13,10 @@ func FatalErrorCmd(err error) tea.Cmd {
 }
 
 // SetConversationCmd is a command for creating a new SetConversationMsg.
-func SetConversationCmd() tea.Msg {
-	return SetConversationMsg{}
+func SetConversationCmd(contact data.Contact) tea.Cmd {
+	return func() tea.Msg {
+		return SetConversationMsg(contact)
+	}
 }
 
 // SendMessageCmd is a command for creating a new SendMessageMsg.
