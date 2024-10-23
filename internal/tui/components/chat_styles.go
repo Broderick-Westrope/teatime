@@ -6,10 +6,17 @@ type ChatStyles struct {
 	Width  int
 	Height int
 
-	Header          lipgloss.Style
-	Conversation    lipgloss.Style
-	Timestamp       lipgloss.Style
+	Header       lipgloss.Style
+	Conversation lipgloss.Style
+	Timestamp    lipgloss.Style
+
 	BubbleStyleFunc func(value string, alignRight bool, textLen int) string
+
+	InputPrompt      lipgloss.Style
+	InputText        lipgloss.Style
+	InputPlaceholder lipgloss.Style
+	InputCompletion  lipgloss.Style
+	InputCursor      lipgloss.Style
 
 	leftBubbleBorder  lipgloss.Border
 	rightBubbleBorder lipgloss.Border
@@ -81,26 +88,32 @@ func EnabledChatStyleFunc(width, height int) *ChatStyles {
 			}
 			return value
 		},
+
+		InputPrompt:      lipgloss.NewStyle(),
+		InputText:        lipgloss.NewStyle(),
+		InputPlaceholder: lipgloss.NewStyle().Foreground(lipgloss.Color("240")),
+		InputCompletion:  lipgloss.NewStyle().Foreground(lipgloss.Color("240")),
+		InputCursor:      lipgloss.NewStyle(),
 	}
 }
 
 func DisabledStyleFunc(width, height int) *ChatStyles {
 	styles := EnabledChatStyleFunc(width, height)
 
-	disabledForegroundColor := lipgloss.Color("240")
+	disabledForeground := lipgloss.NewStyle().Foreground(lipgloss.Color("240")).BorderForeground(lipgloss.Color("240"))
 
-	styles.Header = styles.Header.Foreground(disabledForegroundColor).BorderForeground(disabledForegroundColor)
-	styles.Timestamp = styles.Timestamp.Foreground(disabledForegroundColor)
+	styles.Header = styles.Header.Inherit(disabledForeground)
+	styles.Timestamp = styles.Timestamp.Inherit(disabledForeground)
 
-	leftBubble := lipgloss.NewStyle().Border(leftBubbleBorder, true).BorderForeground(disabledForegroundColor)
-	rightBubble := lipgloss.NewStyle().Border(rightBubbleBorder, true).BorderForeground(disabledForegroundColor)
-	fullWidth := lipgloss.NewStyle().Width(width).Foreground(disabledForegroundColor)
+	leftBubble := lipgloss.NewStyle().Border(leftBubbleBorder, true).Inherit(disabledForeground)
+	rightBubble := lipgloss.NewStyle().Border(rightBubbleBorder, true).Inherit(disabledForeground)
+	fullWidth := lipgloss.NewStyle().Width(width).Inherit(disabledForeground)
 	leftAlign := fullWidth.AlignHorizontal(lipgloss.Left)
 	rightAlign := fullWidth.AlignHorizontal(lipgloss.Right)
 	bubbleMaxWidth := (width / 5) * 4
 
 	styles.BubbleStyleFunc = func(value string, alignRight bool, textLen int) string {
-		value = lipgloss.NewStyle().Width(min(textLen, bubbleMaxWidth)).Foreground(disabledForegroundColor).Render(value)
+		value = lipgloss.NewStyle().Width(min(textLen, bubbleMaxWidth)).Inherit(disabledForeground).Render(value)
 
 		switch alignRight {
 		case true:
@@ -113,6 +126,12 @@ func DisabledStyleFunc(width, height int) *ChatStyles {
 		}
 		return value
 	}
+
+	styles.InputPrompt = lipgloss.NewStyle().Inherit(disabledForeground)
+	styles.InputText = lipgloss.NewStyle().Inherit(disabledForeground)
+	styles.InputPlaceholder = lipgloss.NewStyle().Inherit(disabledForeground)
+	styles.InputCompletion = lipgloss.NewStyle().Inherit(disabledForeground)
+	styles.InputCursor = lipgloss.NewStyle().Inherit(disabledForeground)
 
 	return styles
 }

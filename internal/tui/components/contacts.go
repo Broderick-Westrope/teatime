@@ -12,7 +12,7 @@ var _ tea.Model = &ContactsModel{}
 
 type ContactsModel struct {
 	list   list.Model
-	Styles *ContactsStyles
+	styles *ContactsStyles
 }
 
 func NewContactsModel(contacts []Contact, enabled bool) *ContactsModel {
@@ -30,15 +30,14 @@ func NewContactsModel(contacts []Contact, enabled bool) *ContactsModel {
 	contactList := list.New(items, delegate, 0, 0)
 	contactList.Title = "Contacts"
 
-	m := &ContactsModel{
-		list: contactList,
+	return &ContactsModel{
+		list:   contactList,
+		styles: styles,
 	}
-	m.SwitchStyles(styles)
-
-	return m
 }
 
 func (m *ContactsModel) Init() tea.Cmd {
+	m.SwitchStyles(m.styles)
 	return nil
 }
 
@@ -97,7 +96,7 @@ func (m *ContactsModel) AddNewMessage(in tui.SendMessageMsg) (tea.Cmd, error) {
 }
 
 func (m *ContactsModel) SwitchStyles(styles *ContactsStyles) {
-	m.Styles = styles
+	m.styles = styles
 	m.list.Styles = styles.List
 	m.list.SetDelegate(NewListDelegate(DefaultListDelegateKeyMap(), styles.ListItem))
 }

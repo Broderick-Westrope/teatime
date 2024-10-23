@@ -46,6 +46,7 @@ func NewChatModel(conversation []data.Message, username, chatName string, enable
 }
 
 func (m *ChatModel) Init() tea.Cmd {
+	m.SwitchStyleFunc(m.styleFunc)
 	return m.input.Focus()
 }
 
@@ -145,6 +146,12 @@ func (m *ChatModel) viewTimestamp(sentAt time.Time) string {
 func (m *ChatModel) SwitchStyleFunc(styleFunc ChatStyleFunc) {
 	m.styles = styleFunc(m.styles.Width, m.styles.Height)
 	m.styleFunc = styleFunc
+
+	m.input.PromptStyle = m.styles.InputPrompt
+	m.input.TextStyle = m.styles.InputText
+	m.input.PlaceholderStyle = m.styles.InputPlaceholder
+	m.input.CompletionStyle = m.styles.InputCompletion
+	m.input.Cursor.Style = m.styles.InputCursor
 }
 
 func (m *ChatModel) ResetInput() {
