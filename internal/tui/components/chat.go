@@ -29,7 +29,7 @@ func NewChatModel(conversation []data.Message, username, chatName string, enable
 	input := textinput.New()
 	input.Placeholder = "Message"
 
-	styleFunc := DisabledStyleFunc
+	styleFunc := DisabledChatStyleFunc
 	if enabled {
 		styleFunc = EnabledChatStyleFunc
 	}

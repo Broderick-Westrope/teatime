@@ -14,11 +14,18 @@ import (
 var _ tea.Model = &AppModel{}
 
 type AppModel struct {
-	contacts      *components.ContactsModel
-	chat          *components.ChatModel
-	chatIsFocused bool
-	styles        *AppStyles
+	contacts *components.ContactsModel
+	chat     *components.ChatModel
+	focus    FocusRegion
+	styles   *AppStyles
 }
+
+type FocusRegion int
+
+const (
+	FocusRegionContacts FocusRegion = iota
+	FocusRegionChat
+)
 
 func NewAppModel() *AppModel {
 	time1, _ := time.Parse(time.RFC1123, "Sun, 12 Dec 2021 12:23:00 UTC")
@@ -58,11 +65,13 @@ func NewAppModel() *AppModel {
 		},
 	}
 
+	focus := FocusRegionContacts
+
 	return &AppModel{
-		contacts:      components.NewContactsModel(contactItems, true),
-		chat:          components.NewChatModel(contactItems[0].Conversation, "Cordia_Tromp", contactItems[0].Username, false),
-		chatIsFocused: false,
-		styles:        DefaultAppStyles(),
+		contacts: components.NewContactsModel(contactItems, focus == FocusRegionContacts),
+		chat:     components.NewChatModel(contactItems[0].Conversation, "Cordia_Tromp", contactItems[0].Username, focus == FocusRegionChat),
+		focus:    focus,
+		styles:   DefaultAppStyles(),
 	}
 }
 
@@ -95,9 +104,10 @@ func (m *AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tui.FatalErrorCmd(err)
 		}
 		m.chat.SetConversation(contact.Conversation, contact.Username)
-		m.chatIsFocused = true
-		m.chat.SwitchStyleFunc(components.EnabledChatStyleFunc)
-		m.contacts.SwitchStyles(components.DisabledContactsStyles())
+		err = m.setFocus(FocusRegionChat)
+		if err != nil {
+			return m, tui.FatalErrorCmd(err)
+		}
 		return m, nil
 
 	case tui.SendMessageMsg:
@@ -110,37 +120,31 @@ func (m *AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "esc":
-			m.chatIsFocused = false
-			m.chat.SwitchStyleFunc(components.DisabledStyleFunc)
+			// move from chat to contacts
+			if m.focus != FocusRegionChat {
+				break
+			}
+			err := m.setFocus(FocusRegionContacts)
+			if err != nil {
+				return m, tui.FatalErrorCmd(err)
+			}
 			m.chat.ResetInput()
-			m.contacts.SwitchStyles(components.EnabledContactsStyles())
 			return m, nil
 
 		case "q":
-			if m.chatIsFocused {
+			// quit unless typing "q" in the chat
+			if m.focus == FocusRegionChat {
 				break
 			}
 			return m, tea.Quit
 		}
 	}
 
-	switch m.chatIsFocused {
-	case true:
-		cmd, err := m.updateChatModel(msg)
-		if err != nil {
-			return m, tui.FatalErrorCmd(err)
-		}
-		return m, cmd
-
-	case false:
-		cmd, err := m.updateContactsModel(msg)
-		if err != nil {
-			return m, tui.FatalErrorCmd(err)
-		}
-		return m, cmd
+	cmd, err := m.updateFocussedChild(msg)
+	if err != nil {
+		return m, tui.FatalErrorCmd(err)
 	}
-
-	return m, nil
+	return m, cmd
 }
 
 func (m *AppModel) View() string {
@@ -150,6 +154,19 @@ func (m *AppModel) View() string {
 		m.styles.Chat.Render(m.chat.View()),
 	)
 	return m.styles.View.Render(output)
+}
+
+func (m *AppModel) updateFocussedChild(msg tea.Msg) (tea.Cmd, error) {
+	switch m.focus {
+	case FocusRegionContacts:
+		return m.updateContactsModel(msg)
+
+	case FocusRegionChat:
+		return m.updateChatModel(msg)
+
+	default:
+		return nil, fmt.Errorf("unknown FocusRegion %d", m.focus)
+	}
 }
 
 func (m *AppModel) updateComponentSizes(width, height int) (tea.Cmd, error) {
@@ -194,4 +211,21 @@ func (m *AppModel) updateContactsModel(msg tea.Msg) (tea.Cmd, error) {
 		return nil, fmt.Errorf("failed to update contacts model: %w", tui.ErrInvalidTypeAssertion)
 	}
 	return cmd, nil
+}
+
+func (m *AppModel) setFocus(focus FocusRegion) error {
+	switch focus {
+	case FocusRegionContacts:
+		m.chat.SwitchStyleFunc(components.DisabledChatStyleFunc)
+		m.contacts.SwitchStyles(components.EnabledContactsStyles())
+
+	case FocusRegionChat:
+		m.chat.SwitchStyleFunc(components.EnabledChatStyleFunc)
+		m.contacts.SwitchStyles(components.DisabledContactsStyles())
+
+	default:
+		return fmt.Errorf("unknown FocusRegion %d", focus)
+	}
+	m.focus = focus
+	return nil
 }

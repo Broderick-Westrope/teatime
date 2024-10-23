@@ -58,8 +58,8 @@ var (
 )
 
 func EnabledChatStyleFunc(width, height int) *ChatStyles {
-	leftBubble := lipgloss.NewStyle().Border(leftBubbleBorder, true)
-	rightBubble := lipgloss.NewStyle().Border(rightBubbleBorder, true)
+	leftBubble := lipgloss.NewStyle().Padding(0, 1).Border(leftBubbleBorder, true).BorderForeground(lipgloss.Color("6"))
+	rightBubble := lipgloss.NewStyle().Padding(0, 1).Border(rightBubbleBorder, true).BorderForeground(lipgloss.Color("5"))
 	fullWidth := lipgloss.NewStyle().Width(width)
 	leftAlign := fullWidth.AlignHorizontal(lipgloss.Left)
 	rightAlign := fullWidth.AlignHorizontal(lipgloss.Right)
@@ -97,7 +97,7 @@ func EnabledChatStyleFunc(width, height int) *ChatStyles {
 	}
 }
 
-func DisabledStyleFunc(width, height int) *ChatStyles {
+func DisabledChatStyleFunc(width, height int) *ChatStyles {
 	styles := EnabledChatStyleFunc(width, height)
 
 	disabledForeground := lipgloss.NewStyle().Foreground(lipgloss.Color("240")).BorderForeground(lipgloss.Color("240"))
@@ -105,8 +105,8 @@ func DisabledStyleFunc(width, height int) *ChatStyles {
 	styles.Header = styles.Header.Inherit(disabledForeground)
 	styles.Timestamp = styles.Timestamp.Inherit(disabledForeground)
 
-	leftBubble := lipgloss.NewStyle().Border(leftBubbleBorder, true).Inherit(disabledForeground)
-	rightBubble := lipgloss.NewStyle().Border(rightBubbleBorder, true).Inherit(disabledForeground)
+	leftBubble := lipgloss.NewStyle().Padding(0, 1).Border(leftBubbleBorder, true).Inherit(disabledForeground)
+	rightBubble := lipgloss.NewStyle().Padding(0, 1).Border(rightBubbleBorder, true).Inherit(disabledForeground)
 	fullWidth := lipgloss.NewStyle().Width(width).Inherit(disabledForeground)
 	leftAlign := fullWidth.AlignHorizontal(lipgloss.Left)
 	rightAlign := fullWidth.AlignHorizontal(lipgloss.Right)

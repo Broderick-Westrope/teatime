@@ -42,6 +42,9 @@ func NewListDelegate(keys *ListDelegateKeyMap, styles list.DefaultItemStyles) li
 				return m.NewStatusMessage("Creating new")
 
 			case key.Matches(msg, keys.delete):
+				if m.FilterState() == list.FilterApplied {
+					return nil
+				}
 				m.RemoveItem(m.Index())
 				if len(m.Items()) == 0 {
 					keys.delete.SetEnabled(false)
