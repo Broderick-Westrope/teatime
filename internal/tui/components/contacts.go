@@ -45,8 +45,11 @@ func (m *ContactsModel) Init() tea.Cmd {
 func (m *ContactsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg.(type) {
 	case tea.KeyMsg:
+		// all key presses when filtering should go to the nested list component
 		if m.list.FilterState() == list.Filtering {
-			break
+			var cmd tea.Cmd
+			m.list, cmd = m.list.Update(msg)
+			return m, cmd
 		}
 	}
 
@@ -55,41 +58,33 @@ func (m *ContactsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m *ContactsModel) View() string {
-	return m.list.View()
-}
-
-func (m *ContactsModel) GetSelectedContact() (*Contact, error) {
-	contact, ok := m.list.SelectedItem().(Contact)
-	if !ok {
-		return nil, fmt.Errorf("failed to get selected contact: %w", tui.ErrInvalidTypeAssertion)
-	}
-	return &contact, nil
-}
-
-func (m *ContactsModel) AddNewMessage(in tui.SendMessageMsg) (tea.Cmd, error) {
+// AddNewMessage will add the given message to the chat with the given chatName.
+// It will also move this conversation to the top of the contacts list and update the list selection.
+func (m *ContactsModel) AddNewMessage(chatName string, message data.Message) (tea.Cmd, error) {
+	const methodErr = "failed to add new message to contacts"
 	foundIdx := -1
 	items := m.list.Items()
+
 	for i, item := range items {
 		contact, ok := item.(Contact)
 		if !ok {
-			return nil, fmt.Errorf("failed to add new message to contacts: %v", tui.ErrInvalidTypeAssertion)
+			return nil, fmt.Errorf("%s: %v", methodErr, tui.ErrInvalidTypeAssertion)
 		}
 
-		if contact.Username != in.RecipientUsername {
+		if contact.Username != chatName {
 			continue
 		}
 
 		foundIdx = i
-		contact.Conversation = append(contact.Conversation, in.Message)
+		contact.Conversation = append(contact.Conversation, message)
 		items[i] = contact
 		break
 	}
 
 	switch {
 	case foundIdx < 0:
-		return nil, fmt.Errorf("failed to add new message to contacts: could not find message recipient")
-	case foundIdx != 0:
+		return nil, fmt.Errorf("%s: could not find message recipient", methodErr)
+	case foundIdx != 0: // if the contact is not already first in the list, move it to first
 		item := items[foundIdx]
 		items = append(items[:foundIdx], items[foundIdx+1:]...)
 		items = append([]list.Item{item}, items...)
@@ -98,20 +93,30 @@ func (m *ContactsModel) AddNewMessage(in tui.SendMessageMsg) (tea.Cmd, error) {
 	return m.list.SetItems(items), nil
 }
 
+// Enable makes the model appear as though it is active/focussed.
 func (m *ContactsModel) Enable() {
 	m.switchStyles(enabledContactsStyles())
 }
 
+// Disable makes the model appear as though it is not active/focussed.
 func (m *ContactsModel) Disable() {
 	m.switchStyles(disabledContactsStyles())
 }
 
+// SetSize calculates and applies the correct size to its nested components.
+// The given width and height should be the dimensions for this component not the window.
+func (m *ContactsModel) SetSize(width, height int) {
+	m.list.SetSize(width, height)
+}
+
+// switchStyles updates the model state to have the given styles.
+// It also updates the styles of nested components using the provided styles.
 func (m *ContactsModel) switchStyles(styles *contactsStyles) {
 	m.styles = styles
 	m.list.Styles = styles.List
 	m.list.SetDelegate(NewListDelegate(DefaultListDelegateKeyMap(), styles.ListItem))
 }
 
-func (m *ContactsModel) SetSize(width, height int) {
-	m.list.SetSize(width, height)
+func (m *ContactsModel) View() string {
+	return m.list.View()
 }

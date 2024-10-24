@@ -2,6 +2,7 @@ package data
 
 import "time"
 
+// Message is a single chat message sent from a user.
 type Message struct {
 	Content string    `json:"content"`
 	Author  string    `json:"author"`

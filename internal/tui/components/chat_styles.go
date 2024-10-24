@@ -2,6 +2,41 @@ package components
 
 import "github.com/charmbracelet/lipgloss"
 
+var (
+	// The border to use for a bubble aligned to the left of the conversation.
+	leftBubbleBorder = lipgloss.Border{
+		Top:          "─",
+		Bottom:       "─",
+		Left:         "│",
+		Right:        "│",
+		TopLeft:      "╭",
+		TopRight:     "╮",
+		BottomLeft:   "└",
+		BottomRight:  "╯",
+		MiddleLeft:   "├",
+		MiddleRight:  "┤",
+		Middle:       "┼",
+		MiddleTop:    "┬",
+		MiddleBottom: "┴",
+	}
+	// The border to use for a bubble aligned to the right of the conversation.
+	rightBubbleBorder = lipgloss.Border{
+		Top:          "─",
+		Bottom:       "─",
+		Left:         "│",
+		Right:        "│",
+		TopLeft:      "╭",
+		TopRight:     "╮",
+		BottomLeft:   "╰",
+		BottomRight:  "┘",
+		MiddleLeft:   "├",
+		MiddleRight:  "┤",
+		Middle:       "┼",
+		MiddleTop:    "┬",
+		MiddleBottom: "┴",
+	}
+)
+
 type chatStyles struct {
 	Width  int
 	Height int
@@ -23,39 +58,6 @@ type chatStyles struct {
 }
 
 type chatStyleFunc func(width, height int) *chatStyles
-
-var (
-	leftBubbleBorder = lipgloss.Border{
-		Top:          "─",
-		Bottom:       "─",
-		Left:         "│",
-		Right:        "│",
-		TopLeft:      "╭",
-		TopRight:     "╮",
-		BottomLeft:   "└",
-		BottomRight:  "╯",
-		MiddleLeft:   "├",
-		MiddleRight:  "┤",
-		Middle:       "┼",
-		MiddleTop:    "┬",
-		MiddleBottom: "┴",
-	}
-	rightBubbleBorder = lipgloss.Border{
-		Top:          "─",
-		Bottom:       "─",
-		Left:         "│",
-		Right:        "│",
-		TopLeft:      "╭",
-		TopRight:     "╮",
-		BottomLeft:   "╰",
-		BottomRight:  "┘",
-		MiddleLeft:   "├",
-		MiddleRight:  "┤",
-		Middle:       "┼",
-		MiddleTop:    "┬",
-		MiddleBottom: "┴",
-	}
-)
 
 func enabledChatStyleFunc(width, height int) *chatStyles {
 	leftBubble := lipgloss.NewStyle().Padding(0, 1).Border(leftBubbleBorder, true).BorderForeground(lipgloss.Color("6"))

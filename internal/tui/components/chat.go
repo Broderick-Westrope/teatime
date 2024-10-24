@@ -1,6 +1,7 @@
 package components
 
 import (
+	"strings"
 	"time"
 
 	"github.com/Broderick-Westrope/teatime/internal/data"
@@ -25,8 +26,10 @@ type ChatModel struct {
 }
 
 // NewChatModel creates a new ChatModel.
-//   - conversation is list of all messages to display ordered from oldest (first) to newest (last).
-//   - username is the username that the active user signed up with. This is used to identify which conversation they have sent.
+//   - conversation: list of all messages to display ordered from oldest (first) to newest (last).
+//   - username: the username that the active user signed up with. This is used to identify which conversation they have sent.
+//   - chatName: the title to display in the chat header.
+//   - enabled: whether this component is enabled to begin with.
 func NewChatModel(conversation []data.Message, username, chatName string, enabled bool) *ChatModel {
 	input := textinput.New()
 	input.Placeholder = "Message"
@@ -53,7 +56,7 @@ func (m *ChatModel) Init() tea.Cmd {
 	m.vp = viewport.New(0, 0)
 	// TODO: derive this position
 	m.vp.YPosition = lipgloss.Height(m.viewHeader())
-	m.updateViewportContent()
+	m.refreshViewportContent()
 
 	return tea.Batch(
 		m.input.Focus(),
@@ -67,7 +70,7 @@ func (m *ChatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "enter":
 			value := m.input.Value()
-			if len(value) == 0 {
+			if len(strings.TrimSpace(value)) == 0 {
 				return m, nil
 			}
 			newMsg := data.Message{
@@ -76,7 +79,7 @@ func (m *ChatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				SentAt:  time.Now(),
 			}
 			m.conversation = append(m.conversation, newMsg)
-			m.updateViewportContent()
+			m.refreshViewportContent()
 			m.input.Reset()
 			return m, tui.SendMessageCmd(m.contactName, newMsg)
 		}
@@ -92,6 +95,65 @@ func (m *ChatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
+// SetConversation updates the model state to have the given conversation and chatName.
+// It also refreshes the viewport content.
+func (m *ChatModel) SetConversation(conversation []data.Message, chatName string) {
+	m.conversation = conversation
+	m.contactName = chatName
+	m.refreshViewportContent()
+}
+
+// SetSize calculates and applies the correct size to its nested components.
+// The given width and height should be the dimensions for this component not the window.
+func (m *ChatModel) SetSize(width, height int) {
+	m.styles = m.styleFunc(width, height)
+	m.input.Width = width - (lipgloss.Width(m.input.Prompt) + lipgloss.Width(m.input.Cursor.View()))
+
+	// TODO: derive this margin
+	const verticalMargin = 6
+	m.vp.Width = width
+	m.vp.Height = height - verticalMargin
+	m.refreshViewportContent()
+}
+
+// Enable makes the model appear as though it is active/focussed.
+func (m *ChatModel) Enable() {
+	m.switchStyleFunc(enabledChatStyleFunc)
+	m.refreshViewportContent()
+}
+
+// Disable makes the model appear as though it is not active/focussed.
+func (m *ChatModel) Disable() {
+	m.switchStyleFunc(disabledChatStyleFunc)
+	m.refreshViewportContent()
+}
+
+// ResetInput will reset the content of the nested input component.
+func (m *ChatModel) ResetInput() {
+	m.input.Reset()
+}
+
+// switchStyleFunc updates the model state to have the given styleFunc.
+// It also updates the styles of this component and nested components using the provided styleFunc.
+func (m *ChatModel) switchStyleFunc(styleFunc chatStyleFunc) {
+	m.styles = styleFunc(m.styles.Width, m.styles.Height)
+	m.styleFunc = styleFunc
+
+	m.input.PromptStyle = m.styles.InputPrompt
+	m.input.TextStyle = m.styles.InputText
+	m.input.PlaceholderStyle = m.styles.InputPlaceholder
+	m.input.CompletionStyle = m.styles.InputCompletion
+	m.input.Cursor.Style = m.styles.InputCursor
+}
+
+// refreshViewportContent recalculates the conversation and sets the viewport content to the result.
+// It also scrolls the viewport to the bottom to mimick the behaviour of common messaging apps. This should
+// be done after updating any styles since it will update the viewport content with the styled conversation.
+func (m *ChatModel) refreshViewportContent() {
+	m.vp.SetContent(m.viewConversation())
+	m.vp.GotoBottom()
+}
+
 func (m *ChatModel) View() string {
 	return lipgloss.JoinVertical(lipgloss.Center,
 		m.viewHeader(),
@@ -100,16 +162,12 @@ func (m *ChatModel) View() string {
 	)
 }
 
-func (m *ChatModel) SetConversation(conversation []data.Message, chatName string) {
-	m.conversation = conversation
-	m.contactName = chatName
-	m.updateViewportContent()
-}
-
+// viewHeader returns the styled output for the header.
 func (m *ChatModel) viewHeader() string {
 	return m.styles.Header.Render(m.contactName) + "\n"
 }
 
+// viewConversation returns the styled output for the conversation.
 func (m *ChatModel) viewConversation() string {
 	var output string
 	for i, msg := range m.conversation {
@@ -135,10 +193,12 @@ func (m *ChatModel) viewConversation() string {
 	return m.styles.Conversation.Render(output) + "\n"
 }
 
+// viewChatBubble returns the styled output for a single chat bubble.
 func (m *ChatModel) viewChatBubble(msg string, placeOnRight bool) string {
 	return m.styles.BubbleStyleFunc(msg, placeOnRight, len(msg)) + "\n"
 }
 
+// viewTimestamp returns the styled output for a single timestamp value.
 func (m *ChatModel) viewTimestamp(sentAt time.Time) string {
 	var output string
 	switch {
@@ -158,45 +218,4 @@ func (m *ChatModel) viewTimestamp(sentAt time.Time) string {
 		output += sentAt.Format("Mon, 02 Jan at 3:04 PM")
 	}
 	return m.styles.Timestamp.Render(output) + "\n"
-}
-
-func (m *ChatModel) Enable() {
-	m.switchStyleFunc(enabledChatStyleFunc)
-	m.updateViewportContent()
-}
-
-func (m *ChatModel) Disable() {
-	m.switchStyleFunc(disabledChatStyleFunc)
-	m.updateViewportContent()
-}
-
-func (m *ChatModel) switchStyleFunc(styleFunc chatStyleFunc) {
-	m.styles = styleFunc(m.styles.Width, m.styles.Height)
-	m.styleFunc = styleFunc
-
-	m.input.PromptStyle = m.styles.InputPrompt
-	m.input.TextStyle = m.styles.InputText
-	m.input.PlaceholderStyle = m.styles.InputPlaceholder
-	m.input.CompletionStyle = m.styles.InputCompletion
-	m.input.Cursor.Style = m.styles.InputCursor
-}
-
-func (m *ChatModel) ResetInput() {
-	m.input.Reset()
-}
-
-func (m *ChatModel) updateViewportContent() {
-	m.vp.SetContent(m.viewConversation())
-	m.vp.GotoBottom()
-}
-
-func (m *ChatModel) SetSize(width, height int) {
-	m.styles = m.styleFunc(width, height)
-	m.input.Width = width - (lipgloss.Width(m.input.Prompt) + lipgloss.Width(m.input.Cursor.View()))
-
-	// TODO: derive this margin
-	const verticalMargin = 6
-	m.vp.Width = width
-	m.vp.Height = height - verticalMargin
-	m.updateViewportContent()
 }
