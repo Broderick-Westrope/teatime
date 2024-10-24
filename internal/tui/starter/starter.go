@@ -12,8 +12,9 @@ var _ tea.Model = &Model{}
 
 type Model struct {
 	child       tea.Model
-	ExitError   error
 	messagesLog io.Writer
+
+	ExitError error
 }
 
 func NewModel(child tea.Model, messagesLog io.Writer) *Model {
