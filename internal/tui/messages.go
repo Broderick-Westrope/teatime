@@ -10,8 +10,14 @@ type SetConversationMsg data.Contact
 
 // SendMessageMsg encloses a new message that needs to be persisted locally and sent to the recipient.
 type SendMessageMsg struct {
-	RecipientUsername string
-	Message           data.Message
+	ChatName string
+	Message  data.Message
+}
+
+// ReceiveMessageMsg encloses a new message that needs to be persisted locally.
+type ReceiveMessageMsg struct {
+	ChatName string
+	Message  data.Message
 }
 
 type DebugLogMsg string

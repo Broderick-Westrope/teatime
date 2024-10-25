@@ -23,8 +23,8 @@ func SetConversationCmd(contact data.Contact) tea.Cmd {
 func SendMessageCmd(recipientUsername string, message data.Message) tea.Cmd {
 	return func() tea.Msg {
 		return SendMessageMsg{
-			RecipientUsername: recipientUsername,
-			Message:           message,
+			ChatName: recipientUsername,
+			Message:  message,
 		}
 	}
 }

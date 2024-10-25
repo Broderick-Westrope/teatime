@@ -2,32 +2,30 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"log/slog"
 	"net/http"
 	"os"
-	"time"
 
-	"github.com/gorilla/websocket"
+	"github.com/Broderick-Westrope/teatime/internal/websocket"
 )
 
 const serverAddress = ":8080"
 
 type application struct {
-	clientManager ClientManager
-	log           *slog.Logger
+	hub *websocket.Hub
+	log *slog.Logger
 }
 
 func main() {
 	ctx := context.Background()
 
 	app := application{
-		clientManager: NewClientManager(),
-		log:           slog.New(slog.NewTextHandler(os.Stdout, nil)),
+		hub: websocket.NewHub(),
+		log: slog.New(slog.NewTextHandler(os.Stdout, nil)),
 	}
 
 	http.HandleFunc("/ws", app.handleWebSocket(ctx))
-
-	go app.broadcastTime(ctx)
 
 	app.log.InfoContext(ctx, "starting server", slog.String("addr", serverAddress))
 	err := http.ListenAndServe(serverAddress, nil)
@@ -38,17 +36,19 @@ func main() {
 
 func (app *application) handleWebSocket(ctx context.Context) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		conn, err := app.clientManager.Upgrade(w, r, nil)
+		username := r.Header.Get("username")
+
+		conn, err := app.hub.Upgrade(w, r, nil)
 		if err != nil {
 			return
 		}
 		defer conn.Close()
 
-		app.clientManager.Add(conn)
-		app.log.InfoContext(ctx, "new client connected")
+		app.hub.Add(conn, username)
+		app.log.InfoContext(ctx, "new client connected", slog.String("username", username))
 		defer func() {
-			app.clientManager.Remove(conn)
-			app.log.InfoContext(ctx, "client disconnected")
+			app.hub.Remove(username)
+			app.log.InfoContext(ctx, "client disconnected", slog.String("username", username))
 		}()
 
 		for {
@@ -57,9 +57,9 @@ func (app *application) handleWebSocket(ctx context.Context) http.HandlerFunc {
 				return
 
 			default:
-				_, message, err := conn.ReadMessage()
+				_, msgData, err := conn.ReadMessage()
 				if err != nil {
-					if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
+					if websocket.IsNormalCloseError(err) {
 						app.log.InfoContext(ctx, "received close message", slog.String("value", err.Error()))
 						return
 					}
@@ -68,21 +68,24 @@ func (app *application) handleWebSocket(ctx context.Context) http.HandlerFunc {
 					return
 				}
 
-				app.log.InfoContext(ctx, "received message", slog.String("string", string(message)))
+				var msg websocket.Msg
+				if err = json.Unmarshal(msgData, &msg); err != nil {
+					app.log.ErrorContext(ctx, "error unmarshalling JSON", slog.Any("error", err))
+					return
+				}
+
+				switch payload := msg.Payload.(type) {
+				case websocket.PayloadSendChatMessage:
+					err = app.hub.Send(msgData, payload.RecipientUsernames)
+					if err != nil {
+						app.log.ErrorContext(ctx, "failed to send message", slog.Any("error", err))
+					}
+
+				default:
+					app.log.ErrorContext(ctx, "message type has no handler", slog.Any("msg", msg))
+					return
+				}
 			}
-		}
-	}
-}
-
-func (app *application) broadcastTime(ctx context.Context) {
-	ticker := time.NewTicker(time.Second * 4)
-
-	for range ticker.C {
-		msg := "the time is " + time.Now().String()
-
-		err := app.clientManager.Broadcast([]byte(msg))
-		if err != nil {
-			slog.ErrorContext(ctx, "error broadcasting message", slog.Any("error", err))
 		}
 	}
 }

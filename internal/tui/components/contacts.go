@@ -83,7 +83,7 @@ func (m *ContactsModel) AddNewMessage(chatName string, message data.Message) (te
 
 	switch {
 	case foundIdx < 0:
-		return nil, fmt.Errorf("%s: could not find message recipient", methodErr)
+		return nil, fmt.Errorf("%s: could not find conversation %q", methodErr, chatName)
 	case foundIdx != 0: // if the contact is not already first in the list, move it to first
 		item := items[foundIdx]
 		items = append(items[:foundIdx], items[foundIdx+1:]...)

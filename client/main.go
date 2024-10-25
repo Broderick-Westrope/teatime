@@ -6,37 +6,56 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 	"time"
 
 	"github.com/Broderick-Westrope/teatime/internal/data"
+	"github.com/Broderick-Westrope/teatime/internal/tui"
 	"github.com/Broderick-Westrope/teatime/internal/tui/starter"
 	"github.com/Broderick-Westrope/teatime/internal/tui/views"
+	"github.com/Broderick-Westrope/teatime/internal/websocket"
 	tea "github.com/charmbracelet/bubbletea"
-)
-
-const (
-	messagesDumpFilepath = "logs/messages.log"
 )
 
 func main() {
 	//setTestData()
 
+	username := os.Args[1]
+
 	var messagesDump *os.File
 	var err error
 	if _, ok := os.LookupEnv("DEBUG"); ok {
-		messagesDump, err = createFilepath(messagesDumpFilepath)
+		messagesDump, err = createFilepath(fmt.Sprintf("logs/messages_%s.log", sanitizePathString(username)))
 	}
 
 	contacts := getTestData()
 
+	wsClient, err := websocket.NewClient("ws://localhost:8080/ws", username)
+	if err != nil {
+		log.Fatalf("failed to create WebSocket client: %v\n", err)
+	}
+	defer wsClient.Close()
+
+	msgCh := make(chan tea.Msg)
+	go readFromWebSocket(wsClient, msgCh)
+
 	m := starter.NewModel(
-		views.NewAppModel(contacts, "Cordia_Tromp"),
+		views.NewAppModel(contacts, username),
+		wsClient,
 		messagesDump,
 	)
 
 	opts := []tea.ProgramOption{tea.WithAltScreen(), tea.WithMouseCellMotion()}
 
-	exitModel, err := tea.NewProgram(m, opts...).Run()
+	p := tea.NewProgram(m, opts...)
+
+	go func() {
+		for msg := range msgCh {
+			p.Send(msg)
+		}
+	}()
+
+	exitModel, err := p.Run()
 	if err != nil {
 		log.Fatalf("alas, there's been an error: %v\n", err)
 	}
@@ -48,6 +67,35 @@ func main() {
 
 	if typedExitModel.ExitError != nil {
 		log.Fatalf("starter model exited with an error: %v\n", typedExitModel.ExitError)
+	}
+}
+
+func readFromWebSocket(client *websocket.Client, msgCh chan tea.Msg) {
+	defer close(msgCh)
+
+	for {
+		msg, err := client.ReadMessage()
+		if err != nil {
+			panic(err)
+			if websocket.IsNormalCloseError(err) {
+				//app.log.InfoContext(ctx, "received close message", slog.String("value", err.Error()))
+				return
+			}
+			//app.log.ErrorContext(ctx, "failed to read message", slog.Any("error", err))
+			return
+		}
+
+		switch payload := msg.Payload.(type) {
+		case websocket.PayloadSendChatMessage:
+			msgCh <- tui.ReceiveMessageMsg{
+				ChatName: payload.ChatName,
+				Message:  payload.Message,
+			}
+		default:
+			panic("unknown payload")
+		}
+
+		//app.log.InfoContext(ctx, "received message", slog.String("value", string(msg)))
 	}
 }
 
@@ -139,4 +187,9 @@ func setTestData() {
 	if err != nil {
 		panic("failed to write testdata file: " + err.Error())
 	}
+}
+
+func sanitizePathString(username string) string {
+	invalidChars := regexp.MustCompile(`[<>:"/\\|?*]`)
+	return invalidChars.ReplaceAllString(username, "_")
 }

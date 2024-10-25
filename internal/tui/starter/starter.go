@@ -1,9 +1,12 @@
 package starter
 
 import (
+	"context"
+	"fmt"
 	"io"
 
 	"github.com/Broderick-Westrope/teatime/internal/tui"
+	"github.com/Broderick-Westrope/teatime/internal/websocket"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/davecgh/go-spew/spew"
 )
@@ -11,15 +14,19 @@ import (
 var _ tea.Model = &Model{}
 
 type Model struct {
+	ctx         context.Context
 	child       tea.Model
+	wsClient    *websocket.Client
 	messagesLog io.Writer
 
 	ExitError error
 }
 
-func NewModel(child tea.Model, messagesLog io.Writer) *Model {
+func NewModel(child tea.Model, wsClient *websocket.Client, messagesLog io.Writer) *Model {
 	return &Model{
+		ctx:         context.Background(),
 		child:       child,
+		wsClient:    wsClient,
 		messagesLog: messagesLog,
 	}
 }
@@ -39,9 +46,15 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 
 	case tui.SendMessageMsg:
-		// TODO: send message to recipient
 		var cmd tea.Cmd
-		m.child, cmd = m.child.Update(msg)
+		err := m.wsClient.SendChatMessage(msg.Message, []string{msg.ChatName})
+		if err != nil {
+			return m, tui.FatalErrorCmd(fmt.Errorf("failed to send chat message: %v\n", err))
+		}
+		m.child, cmd = m.child.Update(tui.ReceiveMessageMsg{
+			ChatName: msg.ChatName,
+			Message:  msg.Message,
+		})
 		return m, cmd
 
 	case tea.KeyMsg:

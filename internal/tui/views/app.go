@@ -68,8 +68,8 @@ func (m *AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.chat.SetConversation(msg.Conversation, msg.Username)
 		return m, nil
 
-	case tui.SendMessageMsg:
-		cmd, err := m.contacts.AddNewMessage(msg)
+	case tui.ReceiveMessageMsg:
+		cmd, err := m.contacts.AddNewMessage(msg.ChatName, msg.Message)
 		if err != nil {
 			return m, tui.FatalErrorCmd(err)
 		}
