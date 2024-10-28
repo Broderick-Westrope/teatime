@@ -101,8 +101,13 @@ func (app *application) runTui() {
 		os.Exit(1)
 	}
 
-	if typedExitModel.ExitError != nil {
-		app.log.Error("starter model exited with an error", slog.Any("error", typedExitModel.ExitError))
+	if err = typedExitModel.ExitError; err != nil {
+		if websocket.IsNormalCloseError(err) {
+			app.log.Info("server disconnected gracefully", slog.Any("error", err))
+			fmt.Println("server closed the connection. saved and quit.")
+			return
+		}
+		app.log.Error("starter model exited with an error", slog.Any("error", err))
 		os.Exit(1)
 	}
 }
@@ -113,12 +118,9 @@ func (app *application) readFromWebSocket() {
 	for {
 		msg, err := app.wsClient.ReadMessage()
 		if err != nil {
-			if websocket.IsNormalCloseError(err) {
-				app.log.Info("received close message", slog.String("value", err.Error()))
-				return
-			}
 			app.log.Error("failed to read message", slog.Any("error", err))
-			os.Exit(1)
+			app.msgCh <- tui.FatalErrorMsg(err)
+			return
 		}
 
 		switch payload := msg.Payload.(type) {
@@ -129,9 +131,11 @@ func (app *application) readFromWebSocket() {
 			}
 		default:
 			app.log.Error("unknown WebSocket message payload", slog.Int("msg_type", int(msg.Type)))
-			os.Exit(1)
+			app.msgCh <- tui.FatalErrorMsg(fmt.Errorf("unknown WebSocket message payload"))
+			return
 		}
 
+		// TODO: This can be removed after debugging
 		app.log.Info("received message", slog.Any("value", msg))
 	}
 }

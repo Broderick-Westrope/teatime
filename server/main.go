@@ -3,9 +3,14 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 	"os"
+	"os/signal"
+	"sync"
+	"syscall"
+	"time"
 
 	"github.com/Broderick-Westrope/teatime/internal/websocket"
 )
@@ -25,20 +30,22 @@ func newApp() *application {
 }
 
 func main() {
-	ctx := context.Background()
+	ctx, cancelCtx := context.WithCancel(context.Background())
 	app := newApp()
+	server := &http.Server{Addr: serverAddress}
+	wg := &sync.WaitGroup{}
 
-	http.HandleFunc("/ws", app.handleWebSocket(ctx))
+	http.HandleFunc("/ws", app.handleWebSocket(ctx, wg))
 
-	app.log.Info("starting server", slog.String("addr", serverAddress))
-	err := http.ListenAndServe(serverAddress, nil)
-	if err != nil {
-		app.log.Error("failed to listen", slog.Any("error", err))
-	}
+	go app.startServer(server)
+	app.handleShutdown(server, cancelCtx, wg)
 }
 
-func (app *application) handleWebSocket(ctx context.Context) http.HandlerFunc {
+func (app *application) handleWebSocket(ctx context.Context, wg *sync.WaitGroup) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		wg.Add(1)
+		defer wg.Done()
+
 		username := r.Header.Get("username")
 		usernameAttr := slog.String("username", username)
 
@@ -55,23 +62,38 @@ func (app *application) handleWebSocket(ctx context.Context) http.HandlerFunc {
 			app.log.Info("client disconnected", usernameAttr)
 		}()
 
+		msgCh := make(chan []byte)
+		errCh := make(chan error)
+		go func() {
+			for {
+				_, msgData, err := conn.ReadMessage()
+				if err != nil {
+					errCh <- err
+					return
+				}
+				msgCh <- msgData
+			}
+		}()
+
 		for {
 			select {
 			case <-ctx.Done():
+				app.log.Info("closing connection", usernameAttr)
+				err = app.hub.Close(username)
+				if err != nil {
+					app.log.Error("failed to send close message", usernameAttr, slog.Any("error", err))
+				}
 				return
 
-			default:
-				_, msgData, err := conn.ReadMessage()
-				if err != nil {
-					if websocket.IsNormalCloseError(err) {
-						app.log.Info("received close message", usernameAttr, slog.String("value", err.Error()))
-						return
-					}
-
-					app.log.Error("error reading message", usernameAttr, slog.Any("error", err))
+			case err = <-errCh:
+				if websocket.IsNormalCloseError(err) {
+					app.log.Info("received close message", usernameAttr, slog.String("value", err.Error()))
 					return
 				}
+				app.log.Error("error reading message", usernameAttr, slog.Any("error", err))
+				return
 
+			case msgData := <-msgCh:
 				var msg websocket.Msg
 				if err = json.Unmarshal(msgData, &msg); err != nil {
 					app.log.Error("error unmarshalling JSON", usernameAttr, slog.Any("error", err))
@@ -93,4 +115,32 @@ func (app *application) handleWebSocket(ctx context.Context) http.HandlerFunc {
 			}
 		}
 	}
+}
+
+func (app *application) startServer(server *http.Server) {
+	app.log.Info("starting server", slog.String("addr", server.Addr))
+	err := server.ListenAndServe()
+	if err != nil && !errors.Is(err, http.ErrServerClosed) {
+		app.log.Error("HTTP server failed", slog.Any("error", err))
+	}
+	app.log.Info("stopped serving new connections", slog.Any("error", err))
+}
+
+func (app *application) handleShutdown(server *http.Server, cancelCtx context.CancelFunc, wg *sync.WaitGroup) {
+	shutdownSigCh := make(chan os.Signal, 1)
+	signal.Notify(shutdownSigCh, syscall.SIGINT, syscall.SIGTERM)
+	<-shutdownSigCh
+
+	app.log.Info("shutdown signal received")
+	cancelCtx()
+	wg.Wait()
+
+	shutdownCtx, shutdownRelease := context.WithTimeout(context.Background(), 10*time.Second)
+	defer shutdownRelease()
+
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		app.log.Error("failed to shutdown HTTP server", slog.Any("error", err))
+		os.Exit(1)
+	}
+	app.log.Info("graceful shutdown complete")
 }

@@ -2,7 +2,10 @@ package websocket
 
 import (
 	"encoding/json"
+	"fmt"
+	"math/rand"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/Broderick-Westrope/teatime/internal/data"
@@ -12,15 +15,17 @@ import (
 // Client is a struct that represents the websocket client.
 type Client struct {
 	conn     *websocket.Conn
-	endpoint string
+	mu       *sync.Mutex
+	uri      string
 	username string
 }
 
 // NewClient is a function used to create a new websocket client.
-func NewClient(endpoint, username string) (*Client, error) {
+func NewClient(uri, username string) (*Client, error) {
 	c := &Client{
 		conn:     nil,
-		endpoint: endpoint,
+		mu:       &sync.Mutex{},
+		uri:      uri,
 		username: username,
 	}
 	err := c.connect()
@@ -29,49 +34,60 @@ func NewClient(endpoint, username string) (*Client, error) {
 
 // connect will create and store a connection to the WebSocket server.
 func (c *Client) connect() error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	header := http.Header{}
 	header.Add("username", c.username)
 
-	conn, resp, err := websocket.DefaultDialer.Dial(c.endpoint, header)
+	conn, _, err := websocket.DefaultDialer.Dial(c.uri, header)
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
 
 	c.conn = conn
 	return nil
 }
 
+// TODO: make use of this
+func (c *Client) Reconnect() error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	var err error
+	baseDelay := time.Second
+	maxDelay := 10 * time.Second
+
+	for attempt := 1; attempt <= 3; attempt++ {
+		c.conn, _, err = websocket.DefaultDialer.Dial(c.uri, nil)
+		if err == nil {
+			return nil
+		}
+
+		// Calculate exponential backoff with jitter
+		delay := baseDelay * (1 << (attempt - 1))
+		if delay > maxDelay {
+			delay = maxDelay
+		}
+		delay = time.Duration(rand.Int63n(int64(delay)))
+
+		time.Sleep(delay)
+	}
+	return fmt.Errorf("failed to reconnect after 10 attempts: %w", err)
+}
+
 // Close will gracefully close the WebSocket connection.
 func (c *Client) Close() error {
-	err := c.conn.WriteControl(
-		websocket.CloseMessage,
-		websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""),
-		time.Now().Add(time.Minute),
-	)
-	if err != nil {
-		return err
-	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
-	err = c.conn.SetReadDeadline(time.Now().Add(5 * time.Second))
-	if err != nil {
-		return err
-	}
-
-	for {
-		_, _, err = c.conn.NextReader()
-		if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
-			break
-		}
-		if err != nil {
-			break
-		}
-	}
-
-	return c.conn.Close()
+	return closeConnection(c.conn)
 }
 
 func (c *Client) ReadMessage() (*Msg, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	_, msgData, err := c.conn.ReadMessage()
 	if err != nil {
 		return nil, err
@@ -87,6 +103,9 @@ func (c *Client) ReadMessage() (*Msg, error) {
 }
 
 func (c *Client) SendChatMessage(message data.Message, conversationName string, recipients []string) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	return c.conn.WriteJSON(Msg{
 		Type: MsgTypeSendChatMessage,
 		Payload: PayloadSendChatMessage{

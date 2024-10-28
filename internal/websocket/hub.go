@@ -14,7 +14,7 @@ type Hub struct {
 	upgrader *websocket.Upgrader
 }
 
-// NewHub initializes a new WebSocket client manager.
+// NewHub initializes a new WebSocket client hub.
 func NewHub() *Hub {
 	return &Hub{
 		clients: make(map[string]*websocket.Conn),
@@ -29,14 +29,14 @@ func (h *Hub) Upgrade(w http.ResponseWriter, r *http.Request, responseHeader htt
 	return h.upgrader.Upgrade(w, r, responseHeader)
 }
 
-// Add adds a WebSocket connection to the manager.
+// Add adds a WebSocket connection to the hub.
 func (h *Hub) Add(conn *websocket.Conn, username string) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	h.clients[username] = conn
 }
 
-// Remove removes a WebSocket connection from the manager.
+// Remove removes a WebSocket connection from the hub.
 func (h *Hub) Remove(username string) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -63,6 +63,11 @@ func (h *Hub) Send(message []byte, usernames []string) error {
 		}
 	}
 	return nil
+}
+
+// Close closes a WebSocket connection.
+func (h *Hub) Close(username string) error {
+	return closeConnection(h.clients[username])
 }
 
 func IsNormalCloseError(err error) bool {
