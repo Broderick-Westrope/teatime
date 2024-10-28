@@ -15,7 +15,7 @@ import (
 // Client is a struct that represents the websocket client.
 type Client struct {
 	conn     *websocket.Conn
-	mu       *sync.Mutex
+	mu       *sync.RWMutex
 	uri      string
 	username string
 }
@@ -24,7 +24,7 @@ type Client struct {
 func NewClient(uri, username string) (*Client, error) {
 	c := &Client{
 		conn:     nil,
-		mu:       &sync.Mutex{},
+		mu:       &sync.RWMutex{},
 		uri:      uri,
 		username: username,
 	}
@@ -78,15 +78,12 @@ func (c *Client) Reconnect() error {
 
 // Close will gracefully close the WebSocket connection.
 func (c *Client) Close() error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
 	return closeConnection(c.conn)
 }
 
 func (c *Client) ReadMessage() (*Msg, error) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 
 	_, msgData, err := c.conn.ReadMessage()
 	if err != nil {
@@ -103,8 +100,8 @@ func (c *Client) ReadMessage() (*Msg, error) {
 }
 
 func (c *Client) SendChatMessage(message data.Message, conversationName string, recipients []string) error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 
 	return c.conn.WriteJSON(Msg{
 		Type: MsgTypeSendChatMessage,
