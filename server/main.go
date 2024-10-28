@@ -30,7 +30,7 @@ func main() {
 
 	http.HandleFunc("/ws", app.handleWebSocket(ctx))
 
-	app.log.InfoContext(ctx, "starting server", slog.String("addr", serverAddress))
+	app.log.Info("starting server", slog.String("addr", serverAddress))
 	err := http.ListenAndServe(serverAddress, nil)
 	if err != nil {
 		app.log.Error("failed to listen", slog.Any("error", err))
@@ -40,6 +40,7 @@ func main() {
 func (app *application) handleWebSocket(ctx context.Context) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		username := r.Header.Get("username")
+		usernameAttr := slog.String("username", username)
 
 		conn, err := app.hub.Upgrade(w, r, nil)
 		if err != nil {
@@ -48,10 +49,10 @@ func (app *application) handleWebSocket(ctx context.Context) http.HandlerFunc {
 		defer conn.Close()
 
 		app.hub.Add(conn, username)
-		app.log.InfoContext(ctx, "new client connected", slog.String("username", username))
+		app.log.Info("new client connected", usernameAttr)
 		defer func() {
 			app.hub.Remove(username)
-			app.log.InfoContext(ctx, "client disconnected", slog.String("username", username))
+			app.log.Info("client disconnected", usernameAttr)
 		}()
 
 		for {
@@ -63,29 +64,30 @@ func (app *application) handleWebSocket(ctx context.Context) http.HandlerFunc {
 				_, msgData, err := conn.ReadMessage()
 				if err != nil {
 					if websocket.IsNormalCloseError(err) {
-						app.log.InfoContext(ctx, "received close message", slog.String("value", err.Error()))
+						app.log.Info("received close message", usernameAttr, slog.String("value", err.Error()))
 						return
 					}
 
-					app.log.ErrorContext(ctx, "error reading message", slog.Any("error", err))
+					app.log.Error("error reading message", usernameAttr, slog.Any("error", err))
 					return
 				}
 
 				var msg websocket.Msg
 				if err = json.Unmarshal(msgData, &msg); err != nil {
-					app.log.ErrorContext(ctx, "error unmarshalling JSON", slog.Any("error", err))
+					app.log.Error("error unmarshalling JSON", usernameAttr, slog.Any("error", err))
 					return
 				}
 
 				switch payload := msg.Payload.(type) {
 				case websocket.PayloadSendChatMessage:
+					app.log.Debug("sending message", slog.Any("recipients", payload.Recipients))
 					err = app.hub.Send(msgData, payload.Recipients)
 					if err != nil {
-						app.log.ErrorContext(ctx, "failed to send message", slog.Any("error", err))
+						app.log.Error("failed to send message", usernameAttr, slog.Any("error", err))
 					}
 
 				default:
-					app.log.ErrorContext(ctx, "message type has no handler", slog.Any("msg", msg))
+					app.log.Error("message type has no handler", usernameAttr, slog.Any("msg", msg))
 					return
 				}
 			}

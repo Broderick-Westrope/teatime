@@ -76,8 +76,6 @@ func (m *ChatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				Author:  m.username,
 				SentAt:  time.Now(),
 			}
-			m.conversation.Messages = append(m.conversation.Messages, newMsg)
-			m.refreshViewportContent()
 			m.input.Reset()
 			return m, tui.SendMessageCmd(newMsg, m.conversation)
 		}
@@ -97,6 +95,11 @@ func (m *ChatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // It also refreshes the viewport content.
 func (m *ChatModel) SetConversation(conversation data.Conversation) {
 	m.conversation = conversation
+	m.refreshViewportContent()
+}
+
+func (m *ChatModel) AddNewMessage(msg data.Message) {
+	m.conversation.Messages = append(m.conversation.Messages, msg)
 	m.refreshViewportContent()
 }
 

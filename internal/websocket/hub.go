@@ -2,7 +2,6 @@ package websocket
 
 import (
 	"fmt"
-	"log/slog"
 	"net/http"
 	"sync"
 
@@ -50,7 +49,6 @@ func (h *Hub) Send(message []byte, usernames []string) error {
 	defer h.mu.RUnlock()
 
 	for _, username := range usernames {
-		slog.Info("sending message", slog.String("recipient", username))
 		conn, exists := h.clients[username]
 		if !exists {
 			// TODO: handle user offline

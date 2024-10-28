@@ -62,26 +62,24 @@ func (m *Model) View() string {
 	return m.child.View()
 }
 
+// SendMessage persists the given message locally and sends it over the relevant WebSocket connections.
+// The conversation participants is used to identify which WebSocket clients should receive this message.
 func (m *Model) SendMessage(msg data.Message, conversation data.Conversation) tea.Cmd {
 	// Add message locally
-	var cmds []tea.Cmd
 	var cmd tea.Cmd
 	m.child, cmd = m.child.Update(tui.ReceiveMessageMsg{
 		ConversationName: conversation.Name,
 		Message:          msg,
 	})
-	cmds = append(cmds, cmd)
 
 	// Send message to recipients via WebSockets
 	recipients := conversation.Participants
-	cmds = append(cmds, tui.DebugLogCmd(fmt.Sprintf("ASDF - participants %v", conversation.Participants)))
 	for i, v := range recipients {
 		if v == msg.Author {
 			recipients = append(recipients[:i], recipients[i+1:]...)
 			break
 		}
 	}
-	cmds = append(cmds, tui.DebugLogCmd(fmt.Sprintf("ASDF - recipients %v", recipients)))
 
 	conversationName := conversation.Name
 	if len(recipients) == 1 {
@@ -93,5 +91,5 @@ func (m *Model) SendMessage(msg data.Message, conversation data.Conversation) te
 		return tui.FatalErrorCmd(fmt.Errorf("failed to send chat message: %v\n", err))
 	}
 
-	return tea.Batch(cmds...)
+	return cmd
 }

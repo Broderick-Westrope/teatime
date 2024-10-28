@@ -1,9 +1,8 @@
 package main
 
 import (
-	"context"
-	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"log/slog"
 	"os"
@@ -27,7 +26,7 @@ type application struct {
 	msgCh    chan tea.Msg
 }
 
-func newApp(username string) *application {
+func newApp(username string, logWriter io.Writer) *application {
 	wsClient, err := websocket.NewClient("ws://localhost:8080/ws", username)
 	if err != nil {
 		log.Fatalf("failed to create WebSocket client: %v\n", err)
@@ -36,7 +35,7 @@ func newApp(username string) *application {
 	_, isDebug := os.LookupEnv("DEBUG")
 
 	return &application{
-		log:      slog.New(slog.NewTextHandler(os.Stdout, nil)),
+		log:      slog.New(slog.NewTextHandler(logWriter, nil)),
 		username: username,
 		wsClient: wsClient,
 		isDebug:  isDebug,
@@ -45,28 +44,31 @@ func newApp(username string) *application {
 }
 
 func main() {
-	//setTestData()
-	//return
-
 	username := os.Args[1]
 
-	ctx := context.Background()
-	app := newApp(username)
+	logFile, err := createFilepath(fmt.Sprintf("logs/client_%s.log", sanitizePathString(username)))
+	if err != nil {
+		panic(fmt.Sprintf("failed to create log file: %v", err))
+	}
+	defer logFile.Close()
+
+	app := newApp(username, logFile)
 	defer app.wsClient.Close()
 
-	go app.readFromWebSocket(ctx)
-	app.runTui(ctx)
+	go app.readFromWebSocket()
+	app.runTui()
 }
 
-func (app *application) runTui(ctx context.Context) {
+func (app *application) runTui() {
 	var messagesDump *os.File
 	var err error
 	if app.isDebug {
-		messagesDump, err = createFilepath(fmt.Sprintf("logs/messages_%s.log", sanitizePathString(app.username)))
+		messagesDump, err = createFilepath(fmt.Sprintf("logs/client-messages_%s.log", sanitizePathString(app.username)))
 		if err != nil {
-			app.log.ErrorContext(ctx, "failed to setup messages dump file", slog.Any("error", err))
+			app.log.Error("failed to setup messages dump file", slog.Any("error", err))
 			os.Exit(1)
 		}
+		defer messagesDump.Close()
 	}
 
 	contacts := getTestData()
@@ -89,33 +91,33 @@ func (app *application) runTui(ctx context.Context) {
 
 	exitModel, err := p.Run()
 	if err != nil {
-		app.log.ErrorContext(ctx, "failed to run program", slog.Any("error", err))
+		app.log.Error("failed to run program", slog.Any("error", err))
 		os.Exit(1)
 	}
 
 	typedExitModel, ok := exitModel.(*starter.Model)
 	if !ok {
-		app.log.ErrorContext(ctx, "failed to assert starter model type", slog.Any("error", err))
+		app.log.Error("failed to assert starter model type", slog.Any("error", err))
 		os.Exit(1)
 	}
 
 	if typedExitModel.ExitError != nil {
-		app.log.ErrorContext(ctx, "starter model exited with an error", slog.Any("error", typedExitModel.ExitError))
+		app.log.Error("starter model exited with an error", slog.Any("error", typedExitModel.ExitError))
 		os.Exit(1)
 	}
 }
 
-func (app *application) readFromWebSocket(ctx context.Context) {
+func (app *application) readFromWebSocket() {
 	defer close(app.msgCh)
 
 	for {
 		msg, err := app.wsClient.ReadMessage()
 		if err != nil {
 			if websocket.IsNormalCloseError(err) {
-				app.log.InfoContext(ctx, "received close message", slog.String("value", err.Error()))
+				app.log.Info("received close message", slog.String("value", err.Error()))
 				return
 			}
-			app.log.ErrorContext(ctx, "failed to read message", slog.Any("error", err))
+			app.log.Error("failed to read message", slog.Any("error", err))
 			os.Exit(1)
 		}
 
@@ -126,11 +128,11 @@ func (app *application) readFromWebSocket(ctx context.Context) {
 				Message:          payload.Message,
 			}
 		default:
-			app.log.ErrorContext(ctx, "unknown WebSocket message payload", slog.Int("msg_type", int(msg.Type)))
+			app.log.Error("unknown WebSocket message payload", slog.Int("msg_type", int(msg.Type)))
 			os.Exit(1)
 		}
 
-		app.log.InfoContext(ctx, "received message", slog.Any("value", msg))
+		app.log.Info("received message", slog.Any("value", msg))
 	}
 }
 
@@ -156,38 +158,27 @@ func createFilepath(path string) (*os.File, error) {
 }
 
 func getTestData() []data.Conversation {
-	b, err := os.ReadFile("testdata.json")
-	if err != nil {
-		panic("failed to read testdata file: " + err.Error())
-	}
-
-	var conversations []data.Conversation
-	err = json.Unmarshal(b, &conversations)
-	if err != nil {
-		panic("failed to unmarshal testdata: " + err.Error())
-	}
-
-	return conversations
-}
-
-func setTestData() {
 	time1, _ := time.Parse(time.RFC1123, "Sun, 12 Dec 2021 12:23:00 UTC")
 	time2, _ := time.Parse(time.RFC1123, "Sun, 13 Dec 2021 12:23:00 UTC")
-	contacts := []data.Conversation{
+	conversations := []data.Conversation{
 		{
-			Name: "Maynard.Adams",
+			Name: "TEST CHAT",
 			Participants: []string{
-				"Maynard.Adams",
-				"Cordia_Tromp",
+				"Sally.Sender",
+				"Robby.Receiver",
+				// With only two people the conversation name is the other persons name.
+				// This is not possible with hardcoded test data. The solution is to add a third,
+				// unused person so that the manually set conversation name will be used.
+				"A third person",
 			},
 			Messages: []data.Message{
 				{
-					Author:  "Maynard.Adams",
+					Author:  "Sally.Sender",
 					Content: "Doloribus eligendi at velit qui.",
 					SentAt:  time1,
 				},
 				{
-					Author:  "Cordia_Tromp",
+					Author:  "Robby.Receiver",
 					Content: "Earum similique tempore. Ullam animi hic repudiandae. Amet id voluptas id error veritatis tenetur incidunt quidem nihil. Eius facere nostrum expedita eum.\nDucimus in temporibus non. Voluptatum enim odio cupiditate error est aspernatur eligendi. Ea iure tenetur nam. Nemo quo veritatis iusto maiores illum modi necessitatibus. Sunt minus ab.\nOfficia deserunt omnis velit aliquid facere sit. Vel rem atque. Veniam dolores corporis quasi sit deserunt minus molestias sunt.",
 					SentAt:  time2,
 				},
@@ -197,6 +188,7 @@ func setTestData() {
 			Name: "Sherwood27",
 			Participants: []string{
 				"Sherwood27",
+				"Sally.Sender",
 			},
 			Messages: []data.Message{
 				{
@@ -206,40 +198,32 @@ func setTestData() {
 			},
 		},
 		{
-			Name: "Elda48",
+			Name: "Rick48",
 			Participants: []string{
-				"Elda48",
-				"Jay Bernhard",
+				"Rick48",
+				"Robby.Receiver",
 			},
 			Messages: []data.Message{
 				{
-					Author:  "Elda48",
+					Author:  "Rick48",
 					Content: "Nulla eaque molestias molestiae porro iusto. Laboriosam sequi laborum autem harum iste ex. Autem minus pariatur soluta voluptatum. Quis dolores cumque atque quisquam unde. Aliquid officia veritatis nihil voluptate dolorum. Delectus recusandae natus ratione animi.\nQuasi unde dolor modi est libero quo quam iste eum. Itaque facere dolore dignissimos placeat. Cumque magni quia reprehenderit voluptas sequi voluptatum reprehenderit.\nAsperiores dolorum eum animi tempora laudantium autem. Omnis quidem atque laboriosam maiores laudantium. Fuga possimus mollitia amet adipisci rerum. Excepturi blanditiis libero modi harum sed. Error quisquam rem ab.\nIpsum nam quasi exercitationem.\nMagni harum ipsum sit.\nA odit iusto provident.\nEaque eveniet tenetur porro tempora sint aut labore qui ea.",
 				},
 				{
-					Author:  "Elda48",
+					Author:  "Rick48",
 					Content: "Nulla eaque molestias molestiae porro iusto. Laboriosam sequi laborum autem harum iste ex. Autem minus pariatur soluta voluptatum. Quis dolores cumque atque quisquam unde. Aliquid officia veritatis nihil voluptate dolorum. Delectus recusandae natus ratione animi.\nQuasi unde dolor modi est libero quo quam iste eum. Itaque facere dolore dignissimos placeat. Cumque magni quia reprehenderit voluptas sequi voluptatum reprehenderit.\nAsperiores dolorum eum animi tempora laudantium autem. Omnis quidem atque laboriosam maiores laudantium. Fuga possimus mollitia amet adipisci rerum. Excepturi blanditiis libero modi harum sed. Error quisquam rem ab.\nIpsum nam quasi exercitationem.\nMagni harum ipsum sit.\nA odit iusto provident.\nEaque eveniet tenetur porro tempora sint aut labore qui ea.",
 				},
 				{
-					Author:  "Jay Bernhard",
+					Author:  "Robby.Receiver",
 					Content: "Nulla eaque molestias molestiae porro iusto. Laboriosam sequi laborum autem harum iste ex. Autem minus pariatur soluta voluptatum. Quis dolores cumque atque quisquam unde. Aliquid officia veritatis nihil voluptate dolorum. Delectus recusandae natus ratione animi.\nQuasi unde dolor modi est libero quo quam iste eum. Itaque facere dolore dignissimos placeat. Cumque magni quia reprehenderit voluptas sequi voluptatum reprehenderit.\nAsperiores dolorum eum animi tempora laudantium autem. Omnis quidem atque laboriosam maiores laudantium. Fuga possimus mollitia amet adipisci rerum. Excepturi blanditiis libero modi harum sed. Error quisquam rem ab.\nIpsum nam quasi exercitationem.\nMagni harum ipsum sit.\nA odit iusto provident.\nEaque eveniet tenetur porro tempora sint aut labore qui ea.",
 				},
 			},
 		},
 	}
 
-	b, err := json.Marshal(contacts)
-	if err != nil {
-		panic("failed to marshal testdata: " + err.Error())
-	}
-
-	err = os.WriteFile("testdata.json", b, 0700)
-	if err != nil {
-		panic("failed to write testdata file: " + err.Error())
-	}
+	return conversations
 }
 
 func sanitizePathString(username string) string {
-	invalidChars := regexp.MustCompile(`[<>:"/\\|?*]`)
-	return invalidChars.ReplaceAllString(username, "_")
+	invalidChars := regexp.MustCompile(`[<>:"/\\|?* ]`)
+	return invalidChars.ReplaceAllString(username, "-")
 }

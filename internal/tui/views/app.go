@@ -69,6 +69,7 @@ func (m *AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case tui.ReceiveMessageMsg:
+		m.chat.AddNewMessage(msg.Message)
 		cmd, err := m.contacts.AddNewMessage(msg.ConversationName, msg.Message)
 		if err != nil {
 			return m, tui.FatalErrorCmd(err)
