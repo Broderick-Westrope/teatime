@@ -17,13 +17,16 @@ type application struct {
 	log *slog.Logger
 }
 
-func main() {
-	ctx := context.Background()
-
-	app := application{
+func newApp() *application {
+	return &application{
 		hub: websocket.NewHub(),
 		log: slog.New(slog.NewTextHandler(os.Stdout, nil)),
 	}
+}
+
+func main() {
+	ctx := context.Background()
+	app := newApp()
 
 	http.HandleFunc("/ws", app.handleWebSocket(ctx))
 

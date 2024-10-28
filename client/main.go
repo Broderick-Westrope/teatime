@@ -1,9 +1,11 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -17,31 +19,59 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-func main() {
-	//setTestData()
+type application struct {
+	log      *slog.Logger
+	username string
+	wsClient *websocket.Client
+	isDebug  bool
+	msgCh    chan tea.Msg
+}
 
-	username := os.Args[1]
-
-	var messagesDump *os.File
-	var err error
-	if _, ok := os.LookupEnv("DEBUG"); ok {
-		messagesDump, err = createFilepath(fmt.Sprintf("logs/messages_%s.log", sanitizePathString(username)))
-	}
-
-	contacts := getTestData()
-
+func newApp(username string) *application {
 	wsClient, err := websocket.NewClient("ws://localhost:8080/ws", username)
 	if err != nil {
 		log.Fatalf("failed to create WebSocket client: %v\n", err)
 	}
-	defer wsClient.Close()
 
-	msgCh := make(chan tea.Msg)
-	go readFromWebSocket(wsClient, msgCh)
+	_, isDebug := os.LookupEnv("DEBUG")
+
+	return &application{
+		log:      slog.New(slog.NewTextHandler(os.Stdout, nil)),
+		username: username,
+		wsClient: wsClient,
+		isDebug:  isDebug,
+		msgCh:    make(chan tea.Msg),
+	}
+}
+
+func main() {
+	//setTestData()
+	//return
+
+	username := os.Args[1]
+
+	ctx := context.Background()
+	app := newApp(username)
+	defer app.wsClient.Close()
+
+	go app.readFromWebSocket(ctx)
+	app.runTui(ctx)
+}
+
+func (app *application) runTui(ctx context.Context) {
+	var messagesDump *os.File
+	var err error
+	if app.isDebug {
+		messagesDump, err = createFilepath(fmt.Sprintf("logs/messages_%s.log", sanitizePathString(app.username)))
+		app.log.ErrorContext(ctx, "failed to setup messages dump file", slog.Any("error", err))
+		os.Exit(1)
+	}
+
+	contacts := getTestData()
 
 	m := starter.NewModel(
-		views.NewAppModel(contacts, username),
-		wsClient,
+		views.NewAppModel(contacts, app.username),
+		app.wsClient,
 		messagesDump,
 	)
 
@@ -50,52 +80,55 @@ func main() {
 	p := tea.NewProgram(m, opts...)
 
 	go func() {
-		for msg := range msgCh {
+		for msg := range app.msgCh {
 			p.Send(msg)
 		}
 	}()
 
 	exitModel, err := p.Run()
 	if err != nil {
-		log.Fatalf("alas, there's been an error: %v\n", err)
+		app.log.ErrorContext(ctx, "failed to run program", slog.Any("error", err))
+		os.Exit(1)
 	}
 
 	typedExitModel, ok := exitModel.(*starter.Model)
 	if !ok {
-		log.Fatalln("failed to assert starter model type")
+		app.log.ErrorContext(ctx, "failed to assert starter model type", slog.Any("error", err))
+		os.Exit(1)
 	}
 
 	if typedExitModel.ExitError != nil {
-		log.Fatalf("starter model exited with an error: %v\n", typedExitModel.ExitError)
+		app.log.ErrorContext(ctx, "starter model exited with an error", slog.Any("error", err))
+		os.Exit(1)
 	}
 }
 
-func readFromWebSocket(client *websocket.Client, msgCh chan tea.Msg) {
-	defer close(msgCh)
+func (app *application) readFromWebSocket(ctx context.Context) {
+	defer close(app.msgCh)
 
 	for {
-		msg, err := client.ReadMessage()
+		msg, err := app.wsClient.ReadMessage()
 		if err != nil {
-			panic(err)
 			if websocket.IsNormalCloseError(err) {
-				//app.log.InfoContext(ctx, "received close message", slog.String("value", err.Error()))
+				app.log.InfoContext(ctx, "received close message", slog.String("value", err.Error()))
 				return
 			}
-			//app.log.ErrorContext(ctx, "failed to read message", slog.Any("error", err))
-			return
+			app.log.ErrorContext(ctx, "failed to read message", slog.Any("error", err))
+			os.Exit(1)
 		}
 
 		switch payload := msg.Payload.(type) {
 		case websocket.PayloadSendChatMessage:
-			msgCh <- tui.ReceiveMessageMsg{
+			app.msgCh <- tui.ReceiveMessageMsg{
 				ConversationName: payload.ChatName,
 				Message:          payload.Message,
 			}
 		default:
-			panic("unknown payload")
+			app.log.ErrorContext(ctx, "unknown WebSocket message payload", slog.Int("msg_type", int(msg.Type)))
+			os.Exit(1)
 		}
 
-		//app.log.InfoContext(ctx, "received message", slog.String("value", string(msg)))
+		app.log.InfoContext(ctx, "received message", slog.Any("value", msg))
 	}
 }
 
