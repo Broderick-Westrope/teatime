@@ -1,7 +1,6 @@
 package starter
 
 import (
-	"context"
 	"fmt"
 	"io"
 
@@ -15,7 +14,6 @@ import (
 var _ tea.Model = &Model{}
 
 type Model struct {
-	ctx         context.Context
 	child       tea.Model
 	wsClient    *websocket.Client
 	messagesLog io.Writer
@@ -25,7 +23,6 @@ type Model struct {
 
 func NewModel(child tea.Model, wsClient *websocket.Client, messagesLog io.Writer) *Model {
 	return &Model{
-		ctx:         context.Background(),
 		child:       child,
 		wsClient:    wsClient,
 		messagesLog: messagesLog,
@@ -66,20 +63,35 @@ func (m *Model) View() string {
 }
 
 func (m *Model) SendMessage(msg data.Message, conversation data.Conversation) tea.Cmd {
-	err := m.wsClient.SendChatMessage(msg, conversation.Participants)
+	// Add message locally
+	var cmds []tea.Cmd
+	var cmd tea.Cmd
+	m.child, cmd = m.child.Update(tui.ReceiveMessageMsg{
+		ConversationName: conversation.Name,
+		Message:          msg,
+	})
+	cmds = append(cmds, cmd)
+
+	// Send message to recipients via WebSockets
+	recipients := conversation.Participants
+	cmds = append(cmds, tui.DebugLogCmd(fmt.Sprintf("ASDF - participants %v", conversation.Participants)))
+	for i, v := range recipients {
+		if v == msg.Author {
+			recipients = append(recipients[:i], recipients[i+1:]...)
+			break
+		}
+	}
+	cmds = append(cmds, tui.DebugLogCmd(fmt.Sprintf("ASDF - recipients %v", recipients)))
+
+	conversationName := conversation.Name
+	if len(recipients) == 1 {
+		conversationName = msg.Author
+	}
+
+	err := m.wsClient.SendChatMessage(msg, conversationName, recipients)
 	if err != nil {
 		return tui.FatalErrorCmd(fmt.Errorf("failed to send chat message: %v\n", err))
 	}
 
-	conversationName := conversation.Name
-	if len(conversation.Participants) == 2 {
-		conversationName = msg.Author
-	}
-
-	var cmd tea.Cmd
-	m.child, cmd = m.child.Update(tui.ReceiveMessageMsg{
-		ConversationName: conversationName,
-		Message:          msg,
-	})
-	return cmd
+	return tea.Batch(cmds...)
 }

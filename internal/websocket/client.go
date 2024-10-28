@@ -86,13 +86,13 @@ func (c *Client) ReadMessage() (*Msg, error) {
 	return &msg, err
 }
 
-func (c *Client) SendChatMessage(message data.Message, recipientUsernames []string) error {
+func (c *Client) SendChatMessage(message data.Message, conversationName string, recipients []string) error {
 	return c.conn.WriteJSON(Msg{
 		Type: MsgTypeSendChatMessage,
 		Payload: PayloadSendChatMessage{
-			ChatName:           recipientUsernames[0],
-			RecipientUsernames: recipientUsernames,
-			Message:            message,
+			ConversationName: conversationName,
+			Recipients:       recipients,
+			Message:          message,
 		},
 	})
 }

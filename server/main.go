@@ -79,7 +79,7 @@ func (app *application) handleWebSocket(ctx context.Context) http.HandlerFunc {
 
 				switch payload := msg.Payload.(type) {
 				case websocket.PayloadSendChatMessage:
-					err = app.hub.Send(msgData, payload.RecipientUsernames)
+					err = app.hub.Send(msgData, payload.Recipients)
 					if err != nil {
 						app.log.ErrorContext(ctx, "failed to send message", slog.Any("error", err))
 					}

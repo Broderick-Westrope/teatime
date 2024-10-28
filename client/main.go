@@ -63,8 +63,10 @@ func (app *application) runTui(ctx context.Context) {
 	var err error
 	if app.isDebug {
 		messagesDump, err = createFilepath(fmt.Sprintf("logs/messages_%s.log", sanitizePathString(app.username)))
-		app.log.ErrorContext(ctx, "failed to setup messages dump file", slog.Any("error", err))
-		os.Exit(1)
+		if err != nil {
+			app.log.ErrorContext(ctx, "failed to setup messages dump file", slog.Any("error", err))
+			os.Exit(1)
+		}
 	}
 
 	contacts := getTestData()
@@ -98,7 +100,7 @@ func (app *application) runTui(ctx context.Context) {
 	}
 
 	if typedExitModel.ExitError != nil {
-		app.log.ErrorContext(ctx, "starter model exited with an error", slog.Any("error", err))
+		app.log.ErrorContext(ctx, "starter model exited with an error", slog.Any("error", typedExitModel.ExitError))
 		os.Exit(1)
 	}
 }
@@ -120,7 +122,7 @@ func (app *application) readFromWebSocket(ctx context.Context) {
 		switch payload := msg.Payload.(type) {
 		case websocket.PayloadSendChatMessage:
 			app.msgCh <- tui.ReceiveMessageMsg{
-				ConversationName: payload.ChatName,
+				ConversationName: payload.ConversationName,
 				Message:          payload.Message,
 			}
 		default:

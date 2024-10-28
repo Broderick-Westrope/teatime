@@ -28,11 +28,11 @@ func NewConversationsModel(conversations []data.Conversation, enabled bool) *Con
 	}
 
 	delegate := NewListDelegate(DefaultListDelegateKeyMap(), styles.ListItem)
-	contactList := list.New(items, delegate, 0, 0)
-	contactList.Title = "Contacts"
+	conversationsList := list.New(items, delegate, 0, 0)
+	conversationsList.Title = "Conversations"
 
 	return &ConversationsModel{
-		list:   contactList,
+		list:   conversationsList,
 		styles: styles,
 	}
 }
@@ -60,31 +60,31 @@ func (m *ConversationsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 // AddNewMessage will add the given message to the chat with the given chatName.
 // It will also move this messages to the top of the contacts list and update the list selection.
-func (m *ConversationsModel) AddNewMessage(chatName string, message data.Message) (tea.Cmd, error) {
-	const methodErr = "failed to add new message to contacts"
+func (m *ConversationsModel) AddNewMessage(conversationName string, message data.Message) (tea.Cmd, error) {
+	const methodErr = "failed to add new message to conversation"
 	foundIdx := -1
 	items := m.list.Items()
 
 	for i, item := range items {
-		contact, ok := item.(Conversation)
+		conversation, ok := item.(Conversation)
 		if !ok {
-			return nil, fmt.Errorf("%s: %v", methodErr, tui.ErrInvalidTypeAssertion)
+			return nil, fmt.Errorf("%s: (list item) %v", methodErr, tui.ErrInvalidTypeAssertion)
 		}
 
-		if contact.Name != chatName {
+		if conversation.Name != conversationName {
 			continue
 		}
 
 		foundIdx = i
-		contact.Messages = append(contact.Messages, message)
-		items[i] = contact
+		conversation.Messages = append(conversation.Messages, message)
+		items[i] = conversation
 		break
 	}
 
 	switch {
 	case foundIdx < 0:
-		return nil, fmt.Errorf("%s: could not find messages %q", methodErr, chatName)
-	case foundIdx != 0: // if the contact is not already first in the list, move it to first
+		return nil, fmt.Errorf("%s: could not find conversation with name %q", methodErr, conversationName)
+	case foundIdx != 0: // if the conversation is not already first in the list, move it to first
 		item := items[foundIdx]
 		items = append(items[:foundIdx], items[foundIdx+1:]...)
 		items = append([]list.Item{item}, items...)
