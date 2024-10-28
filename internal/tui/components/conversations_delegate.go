@@ -10,11 +10,11 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-type Contact data.Contact
+type Conversation data.Conversation
 
-func (c Contact) Title() string       { return c.Username }
-func (c Contact) Description() string { return c.Conversation[len(c.Conversation)-1].Content }
-func (c Contact) FilterValue() string { return c.Username }
+func (c Conversation) Title() string       { return c.Name }
+func (c Conversation) Description() string { return c.Messages[len(c.Messages)-1].Content }
+func (c Conversation) FilterValue() string { return c.Name }
 
 func NewListDelegate(keys *ListDelegateKeyMap, styles list.DefaultItemStyles) list.DefaultDelegate {
 	d := list.NewDefaultDelegate()
@@ -26,7 +26,7 @@ func NewListDelegate(keys *ListDelegateKeyMap, styles list.DefaultItemStyles) li
 	}
 
 	d.UpdateFunc = func(msg tea.Msg, m *list.Model) tea.Cmd {
-		contact, ok := m.SelectedItem().(Contact)
+		contact, ok := m.SelectedItem().(Conversation)
 		if !ok {
 			return tui.FatalErrorCmd(fmt.Errorf(
 				"list delegate failed to get selected item: %w",
@@ -38,7 +38,7 @@ func NewListDelegate(keys *ListDelegateKeyMap, styles list.DefaultItemStyles) li
 		case tea.KeyMsg:
 			switch {
 			case key.Matches(msg, keys.submit):
-				return tui.SetConversationCmd(data.Contact(contact))
+				return tui.SetConversationCmd(data.Conversation(contact))
 
 			case key.Matches(msg, keys.new):
 				return m.NewStatusMessage("Creating new")
@@ -51,7 +51,7 @@ func NewListDelegate(keys *ListDelegateKeyMap, styles list.DefaultItemStyles) li
 				if len(m.Items()) == 0 {
 					keys.delete.SetEnabled(false)
 				}
-				return m.NewStatusMessage("Deleted " + contact.Username)
+				return m.NewStatusMessage("Deleted " + contact.Name)
 			}
 		}
 		return nil

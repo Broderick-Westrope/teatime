@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/Broderick-Westrope/teatime/internal/data"
 	"github.com/Broderick-Westrope/teatime/internal/tui"
 	"github.com/Broderick-Westrope/teatime/internal/websocket"
 	tea "github.com/charmbracelet/bubbletea"
@@ -46,16 +47,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 
 	case tui.SendMessageMsg:
-		var cmd tea.Cmd
-		err := m.wsClient.SendChatMessage(msg.Message, []string{msg.ChatName})
-		if err != nil {
-			return m, tui.FatalErrorCmd(fmt.Errorf("failed to send chat message: %v\n", err))
-		}
-		m.child, cmd = m.child.Update(tui.ReceiveMessageMsg{
-			ChatName: msg.ChatName,
-			Message:  msg.Message,
-		})
-		return m, cmd
+		return m, m.SendMessage(msg.Message, msg.Conversation)
 
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -71,4 +63,23 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m *Model) View() string {
 	return m.child.View()
+}
+
+func (m *Model) SendMessage(msg data.Message, conversation data.Conversation) tea.Cmd {
+	err := m.wsClient.SendChatMessage(msg, conversation.Participants)
+	if err != nil {
+		return tui.FatalErrorCmd(fmt.Errorf("failed to send chat message: %v\n", err))
+	}
+
+	conversationName := conversation.Name
+	if len(conversation.Participants) == 2 {
+		conversationName = msg.Author
+	}
+
+	var cmd tea.Cmd
+	m.child, cmd = m.child.Update(tui.ReceiveMessageMsg{
+		ConversationName: conversationName,
+		Message:          msg,
+	})
+	return cmd
 }

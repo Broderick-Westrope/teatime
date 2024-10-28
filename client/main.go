@@ -88,8 +88,8 @@ func readFromWebSocket(client *websocket.Client, msgCh chan tea.Msg) {
 		switch payload := msg.Payload.(type) {
 		case websocket.PayloadSendChatMessage:
 			msgCh <- tui.ReceiveMessageMsg{
-				ChatName: payload.ChatName,
-				Message:  payload.Message,
+				ConversationName: payload.ChatName,
+				Message:          payload.Message,
 			}
 		default:
 			panic("unknown payload")
@@ -120,28 +120,32 @@ func createFilepath(path string) (*os.File, error) {
 	return file, nil
 }
 
-func getTestData() []data.Contact {
+func getTestData() []data.Conversation {
 	b, err := os.ReadFile("testdata.json")
 	if err != nil {
 		panic("failed to read testdata file: " + err.Error())
 	}
 
-	var contacts []data.Contact
-	err = json.Unmarshal(b, &contacts)
+	var conversations []data.Conversation
+	err = json.Unmarshal(b, &conversations)
 	if err != nil {
 		panic("failed to unmarshal testdata: " + err.Error())
 	}
 
-	return contacts
+	return conversations
 }
 
 func setTestData() {
 	time1, _ := time.Parse(time.RFC1123, "Sun, 12 Dec 2021 12:23:00 UTC")
 	time2, _ := time.Parse(time.RFC1123, "Sun, 13 Dec 2021 12:23:00 UTC")
-	contacts := []data.Contact{
+	contacts := []data.Conversation{
 		{
-			Username: "Maynard.Adams",
-			Conversation: []data.Message{
+			Name: "Maynard.Adams",
+			Participants: []string{
+				"Maynard.Adams",
+				"Cordia_Tromp",
+			},
+			Messages: []data.Message{
 				{
 					Author:  "Maynard.Adams",
 					Content: "Doloribus eligendi at velit qui.",
@@ -155,23 +159,34 @@ func setTestData() {
 			},
 		},
 		{
-			Username: "Sherwood27",
-			Conversation: []data.Message{
+			Name: "Sherwood27",
+			Participants: []string{
+				"Sherwood27",
+			},
+			Messages: []data.Message{
 				{
+					Author:  "Sherwood27",
 					Content: "provident nesciunt sit",
 				},
 			},
 		},
 		{
-			Username: "Elda48",
-			Conversation: []data.Message{
+			Name: "Elda48",
+			Participants: []string{
+				"Elda48",
+				"Jay Bernhard",
+			},
+			Messages: []data.Message{
 				{
+					Author:  "Elda48",
 					Content: "Nulla eaque molestias molestiae porro iusto. Laboriosam sequi laborum autem harum iste ex. Autem minus pariatur soluta voluptatum. Quis dolores cumque atque quisquam unde. Aliquid officia veritatis nihil voluptate dolorum. Delectus recusandae natus ratione animi.\nQuasi unde dolor modi est libero quo quam iste eum. Itaque facere dolore dignissimos placeat. Cumque magni quia reprehenderit voluptas sequi voluptatum reprehenderit.\nAsperiores dolorum eum animi tempora laudantium autem. Omnis quidem atque laboriosam maiores laudantium. Fuga possimus mollitia amet adipisci rerum. Excepturi blanditiis libero modi harum sed. Error quisquam rem ab.\nIpsum nam quasi exercitationem.\nMagni harum ipsum sit.\nA odit iusto provident.\nEaque eveniet tenetur porro tempora sint aut labore qui ea.",
 				},
 				{
+					Author:  "Elda48",
 					Content: "Nulla eaque molestias molestiae porro iusto. Laboriosam sequi laborum autem harum iste ex. Autem minus pariatur soluta voluptatum. Quis dolores cumque atque quisquam unde. Aliquid officia veritatis nihil voluptate dolorum. Delectus recusandae natus ratione animi.\nQuasi unde dolor modi est libero quo quam iste eum. Itaque facere dolore dignissimos placeat. Cumque magni quia reprehenderit voluptas sequi voluptatum reprehenderit.\nAsperiores dolorum eum animi tempora laudantium autem. Omnis quidem atque laboriosam maiores laudantium. Fuga possimus mollitia amet adipisci rerum. Excepturi blanditiis libero modi harum sed. Error quisquam rem ab.\nIpsum nam quasi exercitationem.\nMagni harum ipsum sit.\nA odit iusto provident.\nEaque eveniet tenetur porro tempora sint aut labore qui ea.",
 				},
 				{
+					Author:  "Jay Bernhard",
 					Content: "Nulla eaque molestias molestiae porro iusto. Laboriosam sequi laborum autem harum iste ex. Autem minus pariatur soluta voluptatum. Quis dolores cumque atque quisquam unde. Aliquid officia veritatis nihil voluptate dolorum. Delectus recusandae natus ratione animi.\nQuasi unde dolor modi est libero quo quam iste eum. Itaque facere dolore dignissimos placeat. Cumque magni quia reprehenderit voluptas sequi voluptatum reprehenderit.\nAsperiores dolorum eum animi tempora laudantium autem. Omnis quidem atque laboriosam maiores laudantium. Fuga possimus mollitia amet adipisci rerum. Excepturi blanditiis libero modi harum sed. Error quisquam rem ab.\nIpsum nam quasi exercitationem.\nMagni harum ipsum sit.\nA odit iusto provident.\nEaque eveniet tenetur porro tempora sint aut labore qui ea.",
 				},
 			},

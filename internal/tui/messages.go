@@ -6,18 +6,18 @@ import "github.com/Broderick-Westrope/teatime/internal/data"
 type FatalErrorMsg error
 
 // SetConversationMsg encloses the contact whose conversation should be displayed the chat.
-type SetConversationMsg data.Contact
+type SetConversationMsg data.Conversation
 
-// SendMessageMsg encloses a new message that needs to be persisted locally and sent to the recipient.
+// SendMessageMsg encloses a new message that needs to be persisted locally and sent to the conversation participants.
 type SendMessageMsg struct {
-	ChatName string
-	Message  data.Message
+	Message      data.Message
+	Conversation data.Conversation
 }
 
 // ReceiveMessageMsg encloses a new message that needs to be persisted locally.
 type ReceiveMessageMsg struct {
-	ChatName string
-	Message  data.Message
+	ConversationName string
+	Message          data.Message
 }
 
 type DebugLogMsg string

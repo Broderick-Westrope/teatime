@@ -9,40 +9,40 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-var _ tea.Model = &ContactsModel{}
+var _ tea.Model = &ConversationsModel{}
 
-type ContactsModel struct {
+type ConversationsModel struct {
 	list   list.Model
-	styles *contactsStyles
+	styles *conversationsStyles
 }
 
-func NewContactsModel(contacts []data.Contact, enabled bool) *ContactsModel {
-	var items = make([]list.Item, len(contacts))
-	for i, d := range contacts {
-		items[i] = Contact(d)
+func NewConversationsModel(conversations []data.Conversation, enabled bool) *ConversationsModel {
+	var items = make([]list.Item, len(conversations))
+	for i, d := range conversations {
+		items[i] = Conversation(d)
 	}
 
-	styles := disabledContactsStyles()
+	styles := disabledConversationsStyles()
 	if enabled {
-		styles = enabledContactsStyles()
+		styles = enabledConversationsStyles()
 	}
 
 	delegate := NewListDelegate(DefaultListDelegateKeyMap(), styles.ListItem)
 	contactList := list.New(items, delegate, 0, 0)
 	contactList.Title = "Contacts"
 
-	return &ContactsModel{
+	return &ConversationsModel{
 		list:   contactList,
 		styles: styles,
 	}
 }
 
-func (m *ContactsModel) Init() tea.Cmd {
+func (m *ConversationsModel) Init() tea.Cmd {
 	m.switchStyles(m.styles)
 	return nil
 }
 
-func (m *ContactsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m *ConversationsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg.(type) {
 	case tea.KeyMsg:
 		// all key presses when filtering should go to the nested list component
@@ -59,31 +59,31 @@ func (m *ContactsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 // AddNewMessage will add the given message to the chat with the given chatName.
-// It will also move this conversation to the top of the contacts list and update the list selection.
-func (m *ContactsModel) AddNewMessage(chatName string, message data.Message) (tea.Cmd, error) {
+// It will also move this messages to the top of the contacts list and update the list selection.
+func (m *ConversationsModel) AddNewMessage(chatName string, message data.Message) (tea.Cmd, error) {
 	const methodErr = "failed to add new message to contacts"
 	foundIdx := -1
 	items := m.list.Items()
 
 	for i, item := range items {
-		contact, ok := item.(Contact)
+		contact, ok := item.(Conversation)
 		if !ok {
 			return nil, fmt.Errorf("%s: %v", methodErr, tui.ErrInvalidTypeAssertion)
 		}
 
-		if contact.Username != chatName {
+		if contact.Name != chatName {
 			continue
 		}
 
 		foundIdx = i
-		contact.Conversation = append(contact.Conversation, message)
+		contact.Messages = append(contact.Messages, message)
 		items[i] = contact
 		break
 	}
 
 	switch {
 	case foundIdx < 0:
-		return nil, fmt.Errorf("%s: could not find conversation %q", methodErr, chatName)
+		return nil, fmt.Errorf("%s: could not find messages %q", methodErr, chatName)
 	case foundIdx != 0: // if the contact is not already first in the list, move it to first
 		item := items[foundIdx]
 		items = append(items[:foundIdx], items[foundIdx+1:]...)
@@ -94,29 +94,29 @@ func (m *ContactsModel) AddNewMessage(chatName string, message data.Message) (te
 }
 
 // Enable makes the model appear as though it is active/focussed.
-func (m *ContactsModel) Enable() {
-	m.switchStyles(enabledContactsStyles())
+func (m *ConversationsModel) Enable() {
+	m.switchStyles(enabledConversationsStyles())
 }
 
 // Disable makes the model appear as though it is not active/focussed.
-func (m *ContactsModel) Disable() {
-	m.switchStyles(disabledContactsStyles())
+func (m *ConversationsModel) Disable() {
+	m.switchStyles(disabledConversationsStyles())
 }
 
 // SetSize calculates and applies the correct size to its nested components.
 // The given width and height should be the dimensions for this component not the window.
-func (m *ContactsModel) SetSize(width, height int) {
+func (m *ConversationsModel) SetSize(width, height int) {
 	m.list.SetSize(width, height)
 }
 
 // switchStyles updates the model state to have the given styles.
 // It also updates the styles of nested components using the provided styles.
-func (m *ContactsModel) switchStyles(styles *contactsStyles) {
+func (m *ConversationsModel) switchStyles(styles *conversationsStyles) {
 	m.styles = styles
 	m.list.Styles = styles.List
 	m.list.SetDelegate(NewListDelegate(DefaultListDelegateKeyMap(), styles.ListItem))
 }
 
-func (m *ContactsModel) View() string {
+func (m *ConversationsModel) View() string {
 	return m.list.View()
 }

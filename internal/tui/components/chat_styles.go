@@ -3,7 +3,7 @@ package components
 import "github.com/charmbracelet/lipgloss"
 
 var (
-	// The border to use for a bubble aligned to the left of the conversation.
+	// The border to use for a bubble aligned to the left of the messages.
 	leftBubbleBorder = lipgloss.Border{
 		Top:          "─",
 		Bottom:       "─",
@@ -19,7 +19,7 @@ var (
 		MiddleTop:    "┬",
 		MiddleBottom: "┴",
 	}
-	// The border to use for a bubble aligned to the right of the conversation.
+	// The border to use for a bubble aligned to the right of the messages.
 	rightBubbleBorder = lipgloss.Border{
 		Top:          "─",
 		Bottom:       "─",

@@ -22,18 +22,18 @@ const (
 var _ tea.Model = &AppModel{}
 
 type AppModel struct {
-	contacts *components.ContactsModel
+	contacts *components.ConversationsModel
 	chat     *components.ChatModel
 	focus    appFocusRegion
 	styles   *AppStyles
 	username string
 }
 
-func NewAppModel(contacts []data.Contact, username string) *AppModel {
+func NewAppModel(conversations []data.Conversation, username string) *AppModel {
 	focus := appFocusRegionContacts
 	return &AppModel{
-		contacts: components.NewContactsModel(contacts, focus == appFocusRegionContacts),
-		chat:     components.NewChatModel(contacts[0].Conversation, username, contacts[0].Username, focus == appFocusRegionChat),
+		contacts: components.NewConversationsModel(conversations, focus == appFocusRegionContacts),
+		chat:     components.NewChatModel(conversations[0], username, focus == appFocusRegionChat),
 		focus:    focus,
 		styles:   DefaultAppStyles(),
 	}
@@ -65,11 +65,11 @@ func (m *AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if err != nil {
 			return m, tui.FatalErrorCmd(err)
 		}
-		m.chat.SetConversation(msg.Conversation, msg.Username)
+		m.chat.SetConversation(data.Conversation(msg))
 		return m, nil
 
 	case tui.ReceiveMessageMsg:
-		cmd, err := m.contacts.AddNewMessage(msg.ChatName, msg.Message)
+		cmd, err := m.contacts.AddNewMessage(msg.ConversationName, msg.Message)
 		if err != nil {
 			return m, tui.FatalErrorCmd(err)
 		}

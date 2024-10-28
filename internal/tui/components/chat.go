@@ -15,9 +15,8 @@ import (
 var _ tea.Model = &ChatModel{}
 
 type ChatModel struct {
-	conversation []data.Message
+	conversation data.Conversation
 	username     string
-	contactName  string
 	input        textinput.Model
 	vp           viewport.Model
 
@@ -26,11 +25,11 @@ type ChatModel struct {
 }
 
 // NewChatModel creates a new ChatModel.
-//   - conversation: list of all messages to display ordered from oldest (first) to newest (last).
-//   - username: the username that the active user signed up with. This is used to identify which conversation they have sent.
+//   - messages: list of all messages to display ordered from oldest (first) to newest (last).
+//   - username: the username that the active user signed up with. This is used to identify which messages they have sent.
 //   - chatName: the title to display in the chat header.
 //   - enabled: whether this component is enabled to begin with.
-func NewChatModel(conversation []data.Message, username, chatName string, enabled bool) *ChatModel {
+func NewChatModel(conversation data.Conversation, username string, enabled bool) *ChatModel {
 	input := textinput.New()
 	input.Placeholder = "Message"
 
@@ -42,7 +41,6 @@ func NewChatModel(conversation []data.Message, username, chatName string, enable
 	return &ChatModel{
 		conversation: conversation,
 		username:     username,
-		contactName:  chatName,
 		input:        input,
 
 		styleFunc: styleFunc,
@@ -78,10 +76,10 @@ func (m *ChatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				Author:  m.username,
 				SentAt:  time.Now(),
 			}
-			m.conversation = append(m.conversation, newMsg)
+			m.conversation.Messages = append(m.conversation.Messages, newMsg)
 			m.refreshViewportContent()
 			m.input.Reset()
-			return m, tui.SendMessageCmd(m.contactName, newMsg)
+			return m, tui.SendMessageCmd(newMsg, m.conversation)
 		}
 	}
 
@@ -95,11 +93,10 @@ func (m *ChatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
-// SetConversation updates the model state to have the given conversation and chatName.
+// SetConversation updates the model state to have the given messages and chatName.
 // It also refreshes the viewport content.
-func (m *ChatModel) SetConversation(conversation []data.Message, chatName string) {
+func (m *ChatModel) SetConversation(conversation data.Conversation) {
 	m.conversation = conversation
-	m.contactName = chatName
 	m.refreshViewportContent()
 }
 
@@ -146,9 +143,9 @@ func (m *ChatModel) switchStyleFunc(styleFunc chatStyleFunc) {
 	m.input.Cursor.Style = m.styles.InputCursor
 }
 
-// refreshViewportContent recalculates the conversation and sets the viewport content to the result.
+// refreshViewportContent recalculates the messages and sets the viewport content to the result.
 // It also scrolls the viewport to the bottom to mimick the behaviour of common messaging apps. This should
-// be done after updating any styles since it will update the viewport content with the styled conversation.
+// be done after updating any styles since it will update the viewport content with the styled messages.
 func (m *ChatModel) refreshViewportContent() {
 	m.vp.SetContent(m.viewConversation())
 	m.vp.GotoBottom()
@@ -164,13 +161,13 @@ func (m *ChatModel) View() string {
 
 // viewHeader returns the styled output for the header.
 func (m *ChatModel) viewHeader() string {
-	return m.styles.Header.Render(m.contactName) + "\n"
+	return m.styles.Header.Render(m.conversation.Name) + "\n"
 }
 
-// viewConversation returns the styled output for the conversation.
+// viewConversation returns the styled output for the messages.
 func (m *ChatModel) viewConversation() string {
 	var output string
-	for i, msg := range m.conversation {
+	for i, msg := range m.conversation.Messages {
 		wasSentByThisUser := msg.Author == m.username
 		bubble := m.viewChatBubble(msg.Content, wasSentByThisUser)
 
@@ -180,7 +177,7 @@ func (m *ChatModel) viewConversation() string {
 			continue
 		}
 
-		prevMsg := m.conversation[i-1]
+		prevMsg := m.conversation.Messages[i-1]
 		switch {
 		case msg.SentAt.Sub(prevMsg.SentAt).Hours() > 12:
 			fallthrough
