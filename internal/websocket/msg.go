@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/Broderick-Westrope/teatime/internal/data"
+	"github.com/Broderick-Westrope/teatime/internal/entity"
 )
 
 type Msg struct {
@@ -23,9 +23,9 @@ type MsgPayload interface {
 }
 
 type PayloadSendChatMessage struct {
-	ConversationName string       `json:"chat_name"`
-	Recipients       []string     `json:"recipient_usernames"`
-	Message          data.Message `json:"message"`
+	ConversationName string         `json:"chat_name"`
+	Recipients       []string       `json:"recipient_usernames"`
+	Message          entity.Message `json:"message"`
 }
 
 func (PayloadSendChatMessage) isWebSocketMsgPayload() {}

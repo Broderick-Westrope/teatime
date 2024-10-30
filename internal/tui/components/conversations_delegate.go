@@ -3,14 +3,14 @@ package components
 import (
 	"fmt"
 
-	"github.com/Broderick-Westrope/teatime/internal/data"
+	"github.com/Broderick-Westrope/teatime/internal/entity"
 	"github.com/Broderick-Westrope/teatime/internal/tui"
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-type Conversation data.Conversation
+type Conversation entity.Conversation
 
 func (c Conversation) Title() string       { return c.Name }
 func (c Conversation) Description() string { return c.Messages[len(c.Messages)-1].Content }
@@ -38,7 +38,7 @@ func NewListDelegate(keys *ListDelegateKeyMap, styles list.DefaultItemStyles) li
 		case tea.KeyMsg:
 			switch {
 			case key.Matches(msg, keys.submit):
-				return tui.SetConversationCmd(data.Conversation(contact))
+				return tui.SetConversationCmd(entity.Conversation(contact))
 
 			case key.Matches(msg, keys.new):
 				return m.NewStatusMessage("Creating new")

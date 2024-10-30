@@ -10,7 +10,7 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/Broderick-Westrope/teatime/internal/data"
+	"github.com/Broderick-Westrope/teatime/internal/entity"
 	"github.com/Broderick-Westrope/teatime/internal/tui"
 	"github.com/Broderick-Westrope/teatime/internal/tui/starter"
 	"github.com/Broderick-Westrope/teatime/internal/tui/views"
@@ -161,10 +161,10 @@ func createFilepath(path string) (*os.File, error) {
 	return file, nil
 }
 
-func getTestData() []data.Conversation {
+func getTestData() []entity.Conversation {
 	time1, _ := time.Parse(time.RFC1123, "Sun, 12 Dec 2021 12:23:00 UTC")
 	time2, _ := time.Parse(time.RFC1123, "Sun, 13 Dec 2021 12:23:00 UTC")
-	conversations := []data.Conversation{
+	conversations := []entity.Conversation{
 		{
 			Name: "TEST CHAT",
 			Participants: []string{
@@ -175,7 +175,7 @@ func getTestData() []data.Conversation {
 				// unused person so that the manually set conversation name will be used.
 				"A third person",
 			},
-			Messages: []data.Message{
+			Messages: []entity.Message{
 				{
 					Author:  "Sally.Sender",
 					Content: "Doloribus eligendi at velit qui.",
@@ -194,7 +194,7 @@ func getTestData() []data.Conversation {
 				"Sherwood27",
 				"Sally.Sender",
 			},
-			Messages: []data.Message{
+			Messages: []entity.Message{
 				{
 					Author:  "Sherwood27",
 					Content: "provident nesciunt sit",
@@ -207,7 +207,7 @@ func getTestData() []data.Conversation {
 				"Rick48",
 				"Robby.Receiver",
 			},
-			Messages: []data.Message{
+			Messages: []entity.Message{
 				{
 					Author:  "Rick48",
 					Content: "Nulla eaque molestias molestiae porro iusto. Laboriosam sequi laborum autem harum iste ex. Autem minus pariatur soluta voluptatum. Quis dolores cumque atque quisquam unde. Aliquid officia veritatis nihil voluptate dolorum. Delectus recusandae natus ratione animi.\nQuasi unde dolor modi est libero quo quam iste eum. Itaque facere dolore dignissimos placeat. Cumque magni quia reprehenderit voluptas sequi voluptatum reprehenderit.\nAsperiores dolorum eum animi tempora laudantium autem. Omnis quidem atque laboriosam maiores laudantium. Fuga possimus mollitia amet adipisci rerum. Excepturi blanditiis libero modi harum sed. Error quisquam rem ab.\nIpsum nam quasi exercitationem.\nMagni harum ipsum sit.\nA odit iusto provident.\nEaque eveniet tenetur porro tempora sint aut labore qui ea.",

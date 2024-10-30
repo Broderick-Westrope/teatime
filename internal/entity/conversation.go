@@ -1,4 +1,4 @@
-package data
+package entity
 
 // Conversation is a list of messages between several participants.
 type Conversation struct {

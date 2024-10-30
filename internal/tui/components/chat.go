@@ -4,7 +4,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Broderick-Westrope/teatime/internal/data"
+	"github.com/Broderick-Westrope/teatime/internal/entity"
 	"github.com/Broderick-Westrope/teatime/internal/tui"
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
@@ -15,7 +15,7 @@ import (
 var _ tea.Model = &ChatModel{}
 
 type ChatModel struct {
-	conversation data.Conversation
+	conversation entity.Conversation
 	username     string
 	input        textinput.Model
 	vp           viewport.Model
@@ -29,7 +29,7 @@ type ChatModel struct {
 //   - username: the username that the active user signed up with. This is used to identify which messages they have sent.
 //   - chatName: the title to display in the chat header.
 //   - enabled: whether this component is enabled to begin with.
-func NewChatModel(conversation data.Conversation, username string, enabled bool) *ChatModel {
+func NewChatModel(conversation entity.Conversation, username string, enabled bool) *ChatModel {
 	input := textinput.New()
 	input.Placeholder = "Message"
 
@@ -71,7 +71,7 @@ func (m *ChatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if len(strings.TrimSpace(value)) == 0 {
 				return m, nil
 			}
-			newMsg := data.Message{
+			newMsg := entity.Message{
 				Content: value,
 				Author:  m.username,
 				SentAt:  time.Now(),
@@ -93,12 +93,12 @@ func (m *ChatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 // SetConversation updates the model state to have the given messages and chatName.
 // It also refreshes the viewport content.
-func (m *ChatModel) SetConversation(conversation data.Conversation) {
+func (m *ChatModel) SetConversation(conversation entity.Conversation) {
 	m.conversation = conversation
 	m.refreshViewportContent()
 }
 
-func (m *ChatModel) AddNewMessage(msg data.Message) {
+func (m *ChatModel) AddNewMessage(msg entity.Message) {
 	m.conversation.Messages = append(m.conversation.Messages, msg)
 	m.refreshViewportContent()
 }

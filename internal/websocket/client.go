@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Broderick-Westrope/teatime/internal/data"
+	"github.com/Broderick-Westrope/teatime/internal/entity"
 	"github.com/gorilla/websocket"
 )
 
@@ -99,7 +99,7 @@ func (c *Client) ReadMessage() (*Msg, error) {
 	return &msg, err
 }
 
-func (c *Client) SendChatMessage(message data.Message, conversationName string, recipients []string) error {
+func (c *Client) SendChatMessage(message entity.Message, conversationName string, recipients []string) error {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 

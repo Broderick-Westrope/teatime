@@ -3,7 +3,7 @@ package views
 import (
 	"fmt"
 
-	"github.com/Broderick-Westrope/teatime/internal/data"
+	"github.com/Broderick-Westrope/teatime/internal/entity"
 	"github.com/Broderick-Westrope/teatime/internal/tui"
 	"github.com/Broderick-Westrope/teatime/internal/tui/components"
 	tea "github.com/charmbracelet/bubbletea"
@@ -29,7 +29,7 @@ type AppModel struct {
 	username string
 }
 
-func NewAppModel(conversations []data.Conversation, username string) *AppModel {
+func NewAppModel(conversations []entity.Conversation, username string) *AppModel {
 	focus := appFocusRegionContacts
 	return &AppModel{
 		contacts: components.NewConversationsModel(conversations, focus == appFocusRegionContacts),
@@ -65,7 +65,7 @@ func (m *AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if err != nil {
 			return m, tui.FatalErrorCmd(err)
 		}
-		m.chat.SetConversation(data.Conversation(msg))
+		m.chat.SetConversation(entity.Conversation(msg))
 		return m, nil
 
 	case tui.ReceiveMessageMsg:

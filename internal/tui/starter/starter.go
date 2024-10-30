@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/Broderick-Westrope/teatime/internal/data"
+	"github.com/Broderick-Westrope/teatime/internal/entity"
 	"github.com/Broderick-Westrope/teatime/internal/tui"
 	"github.com/Broderick-Westrope/teatime/internal/websocket"
 	tea "github.com/charmbracelet/bubbletea"
@@ -64,7 +64,7 @@ func (m *Model) View() string {
 
 // SendMessage persists the given message locally and sends it over the relevant WebSocket connections.
 // The conversation participants is used to identify which WebSocket clients should receive this message.
-func (m *Model) SendMessage(msg data.Message, conversation data.Conversation) tea.Cmd {
+func (m *Model) SendMessage(msg entity.Message, conversation entity.Conversation) tea.Cmd {
 	// Add message locally
 	var cmd tea.Cmd
 	m.child, cmd = m.child.Update(tui.ReceiveMessageMsg{

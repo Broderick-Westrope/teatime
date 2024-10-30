@@ -3,7 +3,7 @@ package components
 import (
 	"fmt"
 
-	"github.com/Broderick-Westrope/teatime/internal/data"
+	"github.com/Broderick-Westrope/teatime/internal/entity"
 	"github.com/Broderick-Westrope/teatime/internal/tui"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
@@ -16,7 +16,7 @@ type ConversationsModel struct {
 	styles *conversationsStyles
 }
 
-func NewConversationsModel(conversations []data.Conversation, enabled bool) *ConversationsModel {
+func NewConversationsModel(conversations []entity.Conversation, enabled bool) *ConversationsModel {
 	var items = make([]list.Item, len(conversations))
 	for i, d := range conversations {
 		items[i] = Conversation(d)
@@ -60,7 +60,7 @@ func (m *ConversationsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 // AddNewMessage will add the given message to the chat with the given chatName.
 // It will also move this messages to the top of the contacts list and update the list selection.
-func (m *ConversationsModel) AddNewMessage(conversationName string, message data.Message) (tea.Cmd, error) {
+func (m *ConversationsModel) AddNewMessage(conversationName string, message entity.Message) (tea.Cmd, error) {
 	const methodErr = "failed to add new message to conversation"
 	foundIdx := -1
 	items := m.list.Items()
