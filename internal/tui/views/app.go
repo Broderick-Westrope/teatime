@@ -15,35 +15,46 @@ import (
 type appFocusRegion int
 
 const (
-	appFocusRegionContacts appFocusRegion = iota
+	appFocusRegionConversations appFocusRegion = iota
 	appFocusRegionChat
 )
 
 var _ tea.Model = &AppModel{}
 
 type AppModel struct {
-	contacts *components.ConversationsModel
-	chat     *components.ChatModel
-	focus    appFocusRegion
-	styles   *AppStyles
-	username string
+	conversations *components.ConversationsModel
+	chat          *components.ChatModel
+	help          *components.ContextualHelp[appFocusRegion]
+
+	focus   appFocusRegion
+	keymaps map[appFocusRegion]components.KeyMap
+	styles  *AppStyles
 }
 
-func NewAppModel(conversations []data.Conversation, username string) *AppModel {
-	focus := appFocusRegionContacts
-	return &AppModel{
-		contacts: components.NewConversationsModel(conversations, focus == appFocusRegionContacts),
-		chat:     components.NewChatModel(conversations[0], username, focus == appFocusRegionChat),
-		focus:    focus,
-		styles:   DefaultAppStyles(),
+func NewAppModel(conversations []data.Conversation, username string) (*AppModel, error) {
+	keymaps := defaultAppKeyMaps()
+	conversationsKeymap, ok := keymaps[appFocusRegionConversations].(*conversationsKeyMap)
+	if !ok {
+		return nil, fmt.Errorf("failed to get conversations keymap: %w", tui.ErrInvalidTypeAssertion)
 	}
+
+	focus := appFocusRegionConversations
+
+	return &AppModel{
+		conversations: components.NewConversationsModel(conversations, conversationsKeymap.ListDelegate, focus == appFocusRegionConversations),
+		chat:          components.NewChatModel(conversations[0], username, focus == appFocusRegionChat),
+		help:          components.NewContextualHelp(keymaps, focus),
+
+		focus:  focus,
+		styles: DefaultAppStyles(),
+	}, nil
 }
 
 func (m *AppModel) Init() tea.Cmd {
 	var cmd tea.Cmd
 	var cmds []tea.Cmd
 
-	cmd = m.contacts.Init()
+	cmd = m.conversations.Init()
 	cmds = append(cmds, cmd)
 
 	cmd = m.chat.Init()
@@ -70,7 +81,7 @@ func (m *AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tui.ReceiveMessageMsg:
 		m.chat.AddNewMessage(msg.Message)
-		cmd, err := m.contacts.AddNewMessage(msg.ConversationName, msg.Message)
+		cmd, err := m.conversations.AddNewMessage(msg.ConversationName, msg.Message)
 		if err != nil {
 			return m, tui.FatalErrorCmd(err)
 		}
@@ -78,12 +89,16 @@ func (m *AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyMsg:
 		switch msg.String() {
+		case "?":
+			m.help.ShowAll = !m.help.ShowAll
+			return m, nil
+
 		case "esc":
-			// move from chat to contacts
+			// move from chat to conversations
 			if m.focus != appFocusRegionChat {
 				break
 			}
-			err := m.setFocus(appFocusRegionContacts)
+			err := m.setFocus(appFocusRegionConversations)
 			if err != nil {
 				return m, tui.FatalErrorCmd(err)
 			}
@@ -110,8 +125,8 @@ func (m *AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // An error is only returned when an unknown appFocusRegion is provided.
 func (m *AppModel) updateFocussedChild(msg tea.Msg) (tea.Cmd, error) {
 	switch m.focus {
-	case appFocusRegionContacts:
-		return tui.UpdateTypedModel(&m.contacts, msg)
+	case appFocusRegionConversations:
+		return tui.UpdateTypedModel(&m.conversations, msg)
 	case appFocusRegionChat:
 		return tui.UpdateTypedModel(&m.chat, msg)
 	default:
@@ -123,16 +138,17 @@ func (m *AppModel) updateFocussedChild(msg tea.Msg) (tea.Cmd, error) {
 // An error is only returned when an unknown appFocusRegion is provided.
 func (m *AppModel) setFocus(focus appFocusRegion) error {
 	switch focus {
-	case appFocusRegionContacts:
-		m.contacts.Enable()
+	case appFocusRegionConversations:
+		m.conversations.Enable()
 		m.chat.Disable()
 	case appFocusRegionChat:
 		m.chat.Enable()
-		m.contacts.Disable()
+		m.conversations.Disable()
 	default:
 		return fmt.Errorf("unknown appFocusRegion %d", focus)
 	}
 	m.focus = focus
+	m.help.Current = focus
 	return nil
 }
 
@@ -141,16 +157,21 @@ func (m *AppModel) setSize(windowWidth, windowHeight int) {
 	frameWidth, frameHeight := m.styles.TotalFrameSize()
 	width, height := windowWidth-frameWidth, windowHeight-frameHeight
 
-	contactsWidth := min(width/3, 35)
-	chatWidth := width - contactsWidth
+	conversationsWidth := min(width/3, 35)
+	chatWidth := width - conversationsWidth
 
-	m.contacts.SetSize(contactsWidth, height)
+	conversationsHeight := height - lipgloss.Height(m.help.View())
+
+	m.conversations.SetSize(conversationsWidth, conversationsHeight)
 	m.chat.SetSize(chatWidth, height)
 }
 
 func (m *AppModel) View() string {
 	output := lipgloss.JoinHorizontal(lipgloss.Center,
-		m.styles.Contacts.Render(m.contacts.View()),
+		lipgloss.JoinVertical(lipgloss.Left,
+			m.styles.Conversations.Render(m.conversations.View()),
+			m.help.View(),
+		),
 		m.styles.Chat.Render(m.chat.View()),
 	)
 	return m.styles.View.Render(output)

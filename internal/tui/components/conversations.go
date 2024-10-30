@@ -12,11 +12,12 @@ import (
 var _ tea.Model = &ConversationsModel{}
 
 type ConversationsModel struct {
-	list   list.Model
-	styles *conversationsStyles
+	list     list.Model
+	styles   *conversationsStyles
+	ldKeymap *ConversationListDelegateKeyMap
 }
 
-func NewConversationsModel(conversations []data.Conversation, enabled bool) *ConversationsModel {
+func NewConversationsModel(conversations []data.Conversation, ldKeymap *ConversationListDelegateKeyMap, enabled bool) *ConversationsModel {
 	var items = make([]list.Item, len(conversations))
 	for i, d := range conversations {
 		items[i] = Conversation(d)
@@ -27,13 +28,15 @@ func NewConversationsModel(conversations []data.Conversation, enabled bool) *Con
 		styles = enabledConversationsStyles()
 	}
 
-	delegate := NewListDelegate(DefaultListDelegateKeyMap(), styles.ListItem)
+	delegate := NewListDelegate(ldKeymap, styles.ListItem)
 	conversationsList := list.New(items, delegate, 0, 0)
 	conversationsList.Title = "Conversations"
+	conversationsList.SetShowHelp(false)
 
 	return &ConversationsModel{
-		list:   conversationsList,
-		styles: styles,
+		list:     conversationsList,
+		styles:   styles,
+		ldKeymap: ldKeymap,
 	}
 }
 
@@ -114,7 +117,7 @@ func (m *ConversationsModel) SetSize(width, height int) {
 func (m *ConversationsModel) switchStyles(styles *conversationsStyles) {
 	m.styles = styles
 	m.list.Styles = styles.List
-	m.list.SetDelegate(NewListDelegate(DefaultListDelegateKeyMap(), styles.ListItem))
+	m.list.SetDelegate(NewListDelegate(m.ldKeymap, styles.ListItem))
 }
 
 func (m *ConversationsModel) View() string {

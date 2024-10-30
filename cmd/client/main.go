@@ -73,8 +73,14 @@ func (app *application) runTui() {
 
 	contacts := getTestData()
 
+	childModel, err := views.NewAppModel(contacts, app.username)
+	if err != nil {
+		app.log.Error("failed to create child model", slog.Any("error", err))
+		os.Exit(1)
+	}
+
 	m := starter.NewModel(
-		views.NewAppModel(contacts, app.username),
+		childModel,
 		app.wsClient,
 		messagesDump,
 	)

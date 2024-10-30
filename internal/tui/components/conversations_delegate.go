@@ -16,14 +16,9 @@ func (c Conversation) Title() string       { return c.Name }
 func (c Conversation) Description() string { return c.Messages[len(c.Messages)-1].Content }
 func (c Conversation) FilterValue() string { return c.Name }
 
-func NewListDelegate(keys *ListDelegateKeyMap, styles list.DefaultItemStyles) list.DefaultDelegate {
+func NewListDelegate(keys *ConversationListDelegateKeyMap, styles list.DefaultItemStyles) list.DefaultDelegate {
 	d := list.NewDefaultDelegate()
 	d.Styles = styles
-
-	d.ShortHelpFunc = keys.ShortHelp
-	d.FullHelpFunc = func() [][]key.Binding {
-		return [][]key.Binding{keys.ShortHelp()}
-	}
 
 	d.UpdateFunc = func(msg tea.Msg, m *list.Model) tea.Cmd {
 		contact, ok := m.SelectedItem().(Conversation)
@@ -37,19 +32,19 @@ func NewListDelegate(keys *ListDelegateKeyMap, styles list.DefaultItemStyles) li
 		switch msg := msg.(type) {
 		case tea.KeyMsg:
 			switch {
-			case key.Matches(msg, keys.submit):
+			case key.Matches(msg, keys.Open):
 				return tui.SetConversationCmd(data.Conversation(contact))
 
-			case key.Matches(msg, keys.new):
+			case key.Matches(msg, keys.New):
 				return m.NewStatusMessage("Creating new")
 
-			case key.Matches(msg, keys.delete):
+			case key.Matches(msg, keys.Delete):
 				if m.FilterState() == list.FilterApplied {
 					return nil
 				}
 				m.RemoveItem(m.Index())
 				if len(m.Items()) == 0 {
-					keys.delete.SetEnabled(false)
+					keys.Delete.SetEnabled(false)
 				}
 				return m.NewStatusMessage("Deleted " + contact.Name)
 			}
@@ -59,33 +54,8 @@ func NewListDelegate(keys *ListDelegateKeyMap, styles list.DefaultItemStyles) li
 	return d
 }
 
-type ListDelegateKeyMap struct {
-	submit key.Binding
-	new    key.Binding
-	delete key.Binding
-}
-
-func DefaultListDelegateKeyMap() *ListDelegateKeyMap {
-	return &ListDelegateKeyMap{
-		submit: key.NewBinding(
-			key.WithKeys("enter"),
-			key.WithHelp("enter", "select contact"),
-		),
-		new: key.NewBinding(
-			key.WithKeys("n", "+"),
-			key.WithHelp("n/+", "new contact"),
-		),
-		delete: key.NewBinding(
-			key.WithKeys("backspace"),
-			key.WithHelp("delete/backspace", "delete contact"),
-		),
-	}
-}
-
-func (d ListDelegateKeyMap) ShortHelp() []key.Binding {
-	return []key.Binding{
-		d.submit,
-		d.new,
-		d.delete,
-	}
+type ConversationListDelegateKeyMap struct {
+	Open   key.Binding
+	New    key.Binding
+	Delete key.Binding
 }
