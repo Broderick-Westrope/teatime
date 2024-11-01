@@ -5,7 +5,12 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"errors"
+	"fmt"
 	"io"
+)
+
+var (
+	ErrFailedToDecrypt = errors.New("failed to decrypt")
 )
 
 // EncryptAESGCM encrypts the plaintext using AES-GCM with the derived key.
@@ -37,12 +42,12 @@ func EncryptAESGCM(key, plaintext []byte) ([]byte, error) {
 func DecryptAESGCM(key, ciphertext []byte) ([]byte, error) {
 	block, err := aes.NewCipher(key)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create new cipher: %w", err)
 	}
 
 	aesgcm, err := cipher.NewGCM(block)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to setup GCM: %w", err)
 	}
 
 	nonceSize := aesgcm.NonceSize()
@@ -56,7 +61,7 @@ func DecryptAESGCM(key, ciphertext []byte) ([]byte, error) {
 	// Decrypt and authenticate the ciphertext.
 	plaintext, err := aesgcm.Open(nil, nonce, ciphertext, nil)
 	if err != nil {
-		return nil, err // Authentication failed
+		return nil, fmt.Errorf("%w: %w", ErrFailedToDecrypt, err)
 	}
 
 	return plaintext, nil

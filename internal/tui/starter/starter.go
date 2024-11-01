@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/Broderick-Westrope/teatime/internal/db"
 	"github.com/Broderick-Westrope/teatime/internal/entity"
 	"github.com/Broderick-Westrope/teatime/internal/tui"
+	"github.com/Broderick-Westrope/teatime/internal/tui/views"
 	"github.com/Broderick-Westrope/teatime/internal/websocket"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/davecgh/go-spew/spew"
@@ -16,17 +18,30 @@ var _ tea.Model = &Model{}
 type Model struct {
 	child       tea.Model
 	wsClient    *websocket.Client
+	repo        *db.Repository
 	messagesLog io.Writer
+
+	username string
+	password string
 
 	ExitError error
 }
 
-func NewModel(child tea.Model, wsClient *websocket.Client, messagesLog io.Writer) *Model {
-	return &Model{
-		child:       child,
-		wsClient:    wsClient,
-		messagesLog: messagesLog,
+func NewModel(username, password string, wsClient *websocket.Client, repo *db.Repository, messagesLog io.Writer) (*Model, error) {
+	conversations, err := repo.GetConversations(username, password)
+	if err != nil {
+		return nil, err
 	}
+
+	return &Model{
+		child:       views.NewAppModel(conversations, username),
+		wsClient:    wsClient,
+		repo:        repo,
+		messagesLog: messagesLog,
+
+		username: username,
+		password: password,
+	}, nil
 }
 
 func (m *Model) Init() tea.Cmd {
@@ -39,9 +54,16 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	switch msg := msg.(type) {
+	case tui.QuitMsg:
+		err := m.saveUserData()
+		if err != nil {
+			return m, tui.FatalErrorCmd(fmt.Errorf("failed to save user data on exit: %w", err))
+		}
+		return m, tea.Quit
+
 	case tui.FatalErrorMsg:
 		m.ExitError = msg
-		return m, tea.Quit
+		return m, tui.QuitCmd
 
 	case tui.SendMessageMsg:
 		return m, m.SendMessage(msg.Message, msg.Conversation)
@@ -49,7 +71,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "ctrl+c":
-			return m, tea.Quit
+			return m, tui.QuitCmd
 		}
 	}
 
@@ -92,4 +114,17 @@ func (m *Model) SendMessage(msg entity.Message, conversation entity.Conversation
 	}
 
 	return cmd
+}
+
+func (m *Model) saveUserData() error {
+	appModel, ok := m.child.(*views.AppModel)
+	if !ok {
+		return fmt.Errorf("failed to cast starter child to app model: %w", tui.ErrInvalidTypeAssertion)
+	}
+	conversations, err := appModel.GetConversations()
+	if err != nil {
+		return err
+	}
+	err = m.repo.SetConversations(m.username, m.password, conversations)
+	return err
 }

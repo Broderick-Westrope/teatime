@@ -29,6 +29,10 @@ func SendMessageCmd(message entity.Message, conversation entity.Conversation) te
 	}
 }
 
+func QuitCmd() tea.Msg {
+	return QuitMsg{}
+}
+
 func DebugLogCmd(value string) tea.Cmd {
 	return func() tea.Msg {
 		return DebugLogMsg(value)

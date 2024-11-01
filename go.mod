@@ -3,7 +3,7 @@ module github.com/Broderick-Westrope/teatime
 go 1.23.0
 
 require (
-	github.com/alexedwards/argon2id v1.0.0
+	github.com/adrg/xdg v0.5.3
 	github.com/charmbracelet/bubbles v0.20.0
 	github.com/charmbracelet/bubbletea v1.1.1
 	github.com/charmbracelet/lipgloss v0.13.0
@@ -31,7 +31,7 @@ require (
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/sahilm/fuzzy v0.1.1 // indirect
 	golang.org/x/sync v0.8.0 // indirect
-	golang.org/x/sys v0.24.0 // indirect
+	golang.org/x/sys v0.26.0 // indirect
 	golang.org/x/text v0.13.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

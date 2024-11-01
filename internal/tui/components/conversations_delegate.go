@@ -26,7 +26,12 @@ func NewListDelegate(keys *ListDelegateKeyMap, styles list.DefaultItemStyles) li
 	}
 
 	d.UpdateFunc = func(msg tea.Msg, m *list.Model) tea.Cmd {
-		contact, ok := m.SelectedItem().(Conversation)
+		selectedItem := m.SelectedItem()
+		if selectedItem == nil {
+			return nil
+		}
+
+		contact, ok := selectedItem.(Conversation)
 		if !ok {
 			return tui.FatalErrorCmd(fmt.Errorf(
 				"list delegate failed to get selected item: %w",

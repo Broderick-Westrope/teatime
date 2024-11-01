@@ -93,6 +93,19 @@ func (m *ConversationsModel) AddNewMessage(conversationName string, message enti
 	return m.list.SetItems(items), nil
 }
 
+func (m *ConversationsModel) GetConversations() ([]entity.Conversation, error) {
+	items := m.list.Items()
+	conversations := make([]entity.Conversation, len(items))
+	for i := range items {
+		conversation, ok := items[i].(Conversation)
+		if !ok {
+			return nil, fmt.Errorf("failed to get conversations: %w", tui.ErrInvalidTypeAssertion)
+		}
+		conversations[i] = entity.Conversation(conversation)
+	}
+	return conversations, nil
+}
+
 // Enable makes the model appear as though it is active/focussed.
 func (m *ConversationsModel) Enable() {
 	m.switchStyles(enabledConversationsStyles())

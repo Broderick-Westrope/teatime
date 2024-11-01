@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -10,23 +11,26 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/Broderick-Westrope/teatime/internal/db"
 	"github.com/Broderick-Westrope/teatime/internal/entity"
 	"github.com/Broderick-Westrope/teatime/internal/tui"
 	"github.com/Broderick-Westrope/teatime/internal/tui/starter"
-	"github.com/Broderick-Westrope/teatime/internal/tui/views"
 	"github.com/Broderick-Westrope/teatime/internal/websocket"
+	"github.com/adrg/xdg"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
 type application struct {
-	log      *slog.Logger
 	username string
+	password string
+
+	log      *slog.Logger
 	wsClient *websocket.Client
 	isDebug  bool
 	msgCh    chan tea.Msg
 }
 
-func newApp(username string, logWriter io.Writer) *application {
+func newApp(username, password string, logWriter io.Writer) *application {
 	wsClient, err := websocket.NewClient("ws://localhost:8080/ws", username)
 	if err != nil {
 		log.Fatalf("failed to create WebSocket client: %v\n", err)
@@ -35,8 +39,10 @@ func newApp(username string, logWriter io.Writer) *application {
 	_, isDebug := os.LookupEnv("DEBUG")
 
 	return &application{
-		log:      slog.New(slog.NewTextHandler(logWriter, nil)),
 		username: username,
+		password: password,
+
+		log:      slog.New(slog.NewTextHandler(logWriter, nil)),
 		wsClient: wsClient,
 		isDebug:  isDebug,
 		msgCh:    make(chan tea.Msg),
@@ -45,6 +51,7 @@ func newApp(username string, logWriter io.Writer) *application {
 
 func main() {
 	username := os.Args[1]
+	password := os.Args[2]
 
 	logFile, err := createFilepath(fmt.Sprintf("logs/client_%s.log", sanitizePathString(username)))
 	if err != nil {
@@ -52,36 +59,43 @@ func main() {
 	}
 	defer logFile.Close()
 
-	app := newApp(username, logFile)
+	app := newApp(username, password, logFile)
 	defer app.wsClient.Close()
 
 	go app.readFromWebSocket()
-	app.runTui()
+
+	err = app.runTui()
+	if err != nil {
+		app.log.Error("failed to run tui", slog.Any("error", err))
+		os.Exit(1)
+	}
 }
 
-func (app *application) runTui() {
+func (app *application) runTui() error {
 	var messagesDump *os.File
 	var err error
 	if app.isDebug {
 		messagesDump, err = createFilepath(fmt.Sprintf("logs/client-messages_%s.log", sanitizePathString(app.username)))
 		if err != nil {
-			app.log.Error("failed to setup messages dump file", slog.Any("error", err))
-			os.Exit(1)
+			return fmt.Errorf("failed to setup messages dump file: %w", err)
 		}
 		defer messagesDump.Close()
 	}
 
-	contacts := getTestData()
+	databaseFilePath, err := setupDatabaseFile()
+	if err != nil {
+		return fmt.Errorf("failed to setup database file: %w", err)
+	}
+	repo, err := db.NewRepository(fmt.Sprintf("file:%s", databaseFilePath))
+	if err != nil {
+		return fmt.Errorf("failed to setup database repository: %w", err)
+	}
 
-	m := starter.NewModel(
-		views.NewAppModel(contacts, app.username),
-		app.wsClient,
-		messagesDump,
-	)
-
-	opts := []tea.ProgramOption{tea.WithAltScreen(), tea.WithMouseCellMotion()}
-
-	p := tea.NewProgram(m, opts...)
+	m, err := starter.NewModel(app.username, app.password, app.wsClient, repo, messagesDump)
+	if err != nil {
+		return fmt.Errorf("failed to create starter model: %w", err)
+	}
+	p := tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion())
 
 	go func() {
 		for msg := range app.msgCh {
@@ -91,25 +105,21 @@ func (app *application) runTui() {
 
 	exitModel, err := p.Run()
 	if err != nil {
-		app.log.Error("failed to run program", slog.Any("error", err))
-		os.Exit(1)
+		return fmt.Errorf("failed to run program: %w", err)
 	}
 
 	typedExitModel, ok := exitModel.(*starter.Model)
 	if !ok {
-		app.log.Error("failed to assert starter model type", slog.Any("error", err))
-		os.Exit(1)
+		return fmt.Errorf("failed to assert starter model type: %w", err)
 	}
 
 	if err = typedExitModel.ExitError; err != nil {
-		if websocket.IsNormalCloseError(err) {
-			app.log.Info("server disconnected gracefully", slog.Any("error", err))
-			fmt.Println("server closed the connection. saved and quit.")
-			return
+		if !websocket.IsNormalCloseError(err) {
+			return fmt.Errorf("starter model exited with an error: %w", err)
 		}
-		app.log.Error("starter model exited with an error", slog.Any("error", err))
-		os.Exit(1)
+		app.log.Info("server disconnected gracefully", slog.Any("error", err))
 	}
+	return nil
 }
 
 func (app *application) readFromWebSocket() {
@@ -159,6 +169,26 @@ func createFilepath(path string) (*os.File, error) {
 		return nil, fmt.Errorf("failed to create file '%s': %w\n", path, err)
 	}
 	return file, nil
+}
+
+func setupDatabaseFile() (string, error) {
+	path, err := xdg.DataFile("TeaTime/teatime.db")
+	if err != nil {
+		return "", err
+	}
+
+	_, err = os.Stat(path)
+	if err != nil {
+		if !errors.Is(err, os.ErrNotExist) {
+			return "", err
+		}
+
+		_, err = os.Create(path)
+		if err != nil {
+			return "", err
+		}
+	}
+	return path, nil
 }
 
 func getTestData() []entity.Conversation {

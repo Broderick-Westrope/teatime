@@ -20,4 +20,6 @@ type ReceiveMessageMsg struct {
 	Message          entity.Message
 }
 
+type QuitMsg struct{}
+
 type DebugLogMsg string

@@ -2,15 +2,29 @@ package secure
 
 import (
 	"encoding/base64"
+	"errors"
+	"fmt"
+	"math/rand"
 	"strings"
 
-	"github.com/alexedwards/argon2id"
 	"golang.org/x/crypto/argon2"
 )
 
 // CREDIT: The contents of this file were derived from https://github.com/alexedwards/argon2id.
 
-type Argon2Params struct {
+var (
+	// ErrInvalidHash is returned if the provided hash isn't in the expected format.
+	ErrInvalidHash = errors.New("argon2id: hash is not in the correct format")
+
+	// ErrIncompatibleVariant is returned if the provided hash was created using a unsupported variant of Argon2.
+	// Currently only "argon2id" is supported by this package.
+	ErrIncompatibleVariant = errors.New("argon2id: incompatible variant of argon2")
+
+	// ErrIncompatibleVersion is returned if the provided hash was created using a different version of Argon2.
+	ErrIncompatibleVersion = errors.New("argon2id: incompatible version of argon2")
+)
+
+type ArgonParams struct {
 	// The amount of memory used by the algorithm (in kibibytes).
 	Memory uint32
 
@@ -23,64 +37,74 @@ type Argon2Params struct {
 
 	// Length of the random salt. 16 bytes is recommended for password hashing.
 	SaltLength uint32
-
-	// Length of the generated key. 16 bytes or more is recommended.
-	KeyLength uint32
 }
 
-func (p *Argon2Params) toExternalParams() *argon2id.Params {
-	return &argon2id.Params{
-		Memory:      p.Memory,
-		Iterations:  p.Iterations,
-		Parallelism: p.Parallelism,
-		SaltLength:  p.SaltLength,
-		KeyLength:   p.KeyLength,
-	}
-}
-
-func fromExternalParams(p *argon2id.Params) *Argon2Params {
-	return &Argon2Params{
-		Memory:      p.Memory,
-		Iterations:  p.Iterations,
-		Parallelism: p.Parallelism,
-		SaltLength:  p.SaltLength,
-		KeyLength:   p.KeyLength,
-	}
-}
-
-func DeriveKey(password, hash string) (key []byte, err error) {
-	params, salt, err := decodeHashWithoutKey(hash)
+func DeriveKey(password, encodedParams string, keyLength uint32) (key []byte, err error) {
+	params, salt, err := decodeArgonParams(encodedParams)
 	if err != nil {
 		return nil, err
 	}
 
 	key = argon2.IDKey([]byte(password), salt,
-		params.Iterations, params.Memory, params.Parallelism, params.KeyLength)
+		params.Iterations, params.Memory, params.Parallelism, keyLength)
 	return key, nil
 }
 
-func CreateKeyAndHash(password string, params *Argon2Params) (key []byte, hash string, err error) {
-	hash, err = argon2id.CreateHash(password, params.toExternalParams())
+func CreateKey(password string, params *ArgonParams, keyLength uint32) (key []byte, encodedParams string, err error) {
+	salt, err := generateRandomBytes(params.SaltLength)
 	if err != nil {
 		return nil, "", err
 	}
+	b64Salt := base64.RawStdEncoding.EncodeToString(salt)
 
-	parts := strings.Split(hash, "$")
-	hash = strings.Join(parts[:len(parts)-1], "$")
+	key = argon2.IDKey([]byte(password), salt, params.Iterations, params.Memory, params.Parallelism, keyLength)
 
-	key, err = base64.RawStdEncoding.Strict().DecodeString(parts[len(parts)-1])
-	if err != nil {
-		return nil, "", err
-	}
+	encodedParams = fmt.Sprintf("$argon2id$v=%d$m=%d,t=%d,p=%d$%s",
+		argon2.Version, params.Memory, params.Iterations, params.Parallelism, b64Salt)
 
-	return key, hash, nil
+	return key, encodedParams, nil
 }
 
-func decodeHashWithoutKey(hash string) (params *Argon2Params, salt []byte, err error) {
-	hash += "$YnJvZGll"
-	externalParams, salt, _, err := argon2id.DecodeHash(hash)
+func decodeArgonParams(hash string) (params *ArgonParams, salt []byte, err error) {
+	vals := strings.Split(hash, "$")
+	if len(vals) != 5 {
+		return nil, nil, ErrInvalidHash
+	}
+
+	if vals[1] != "argon2id" {
+		return nil, nil, ErrIncompatibleVariant
+	}
+
+	var version int
+	_, err = fmt.Sscanf(vals[2], "v=%d", &version)
 	if err != nil {
 		return nil, nil, err
 	}
-	return fromExternalParams(externalParams), salt, nil
+	if version != argon2.Version {
+		return nil, nil, ErrIncompatibleVersion
+	}
+
+	params = &ArgonParams{}
+	_, err = fmt.Sscanf(vals[3], "m=%d,t=%d,p=%d", &params.Memory, &params.Iterations, &params.Parallelism)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	salt, err = base64.RawStdEncoding.Strict().DecodeString(vals[4])
+	if err != nil {
+		return nil, nil, err
+	}
+	params.SaltLength = uint32(len(salt))
+
+	return params, salt, nil
+}
+
+func generateRandomBytes(n uint32) ([]byte, error) {
+	b := make([]byte, n)
+	_, err := rand.Read(b)
+	if err != nil {
+		return nil, err
+	}
+
+	return b, nil
 }

@@ -30,10 +30,19 @@ type AppModel struct {
 }
 
 func NewAppModel(conversations []entity.Conversation, username string) *AppModel {
+	openConversation := entity.Conversation{
+		Name:         "",
+		Participants: nil,
+		Messages:     nil,
+	}
+	if len(conversations) > 0 {
+		openConversation = conversations[0]
+	}
+
 	focus := appFocusRegionContacts
 	return &AppModel{
 		contacts: components.NewConversationsModel(conversations, focus == appFocusRegionContacts),
-		chat:     components.NewChatModel(conversations[0], username, focus == appFocusRegionChat),
+		chat:     components.NewChatModel(openConversation, username, focus == appFocusRegionChat),
 		focus:    focus,
 		styles:   DefaultAppStyles(),
 	}
@@ -81,7 +90,8 @@ func (m *AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "esc":
 			// move from chat to contacts
 			if m.focus != appFocusRegionChat {
-				break
+				// todo: change this to a break once the list is no longer using tea.Quit for this key
+				return m, nil
 			}
 			err := m.setFocus(appFocusRegionContacts)
 			if err != nil {
@@ -93,9 +103,10 @@ func (m *AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "q":
 			// don't quit if the user types "q" in the chat
 			if m.focus == appFocusRegionChat {
-				break
+				// todo: change this to a break once the list is no longer using tea.Quit for this key
+				return m, nil
 			}
-			return m, tea.Quit
+			return m, tui.QuitCmd
 		}
 	}
 
@@ -104,6 +115,10 @@ func (m *AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tui.FatalErrorCmd(err)
 	}
 	return m, cmd
+}
+
+func (m *AppModel) GetConversations() ([]entity.Conversation, error) {
+	return m.contacts.GetConversations()
 }
 
 // updateFocussedChild uses the model state to determine which child model to update.
