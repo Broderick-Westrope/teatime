@@ -6,6 +6,7 @@ type AppStyles struct {
 	View     lipgloss.Style
 	Contacts lipgloss.Style
 	Chat     lipgloss.Style
+	Modal    lipgloss.Style
 }
 
 func DefaultAppStyles() *AppStyles {
@@ -13,6 +14,7 @@ func DefaultAppStyles() *AppStyles {
 		View:     lipgloss.NewStyle().Margin(1).Align(lipgloss.Center, lipgloss.Center),
 		Contacts: lipgloss.NewStyle().BorderStyle(lipgloss.NormalBorder()).BorderRight(true).BorderForeground(lipgloss.Color("237")).PaddingRight(2).MarginRight(2),
 		Chat:     lipgloss.NewStyle(),
+		Modal:    lipgloss.NewStyle().Border(lipgloss.RoundedBorder(), true).Padding(1, 3),
 	}
 }
 

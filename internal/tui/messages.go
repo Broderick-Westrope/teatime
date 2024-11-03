@@ -1,6 +1,9 @@
 package tui
 
-import "github.com/Broderick-Westrope/teatime/internal/entity"
+import (
+	"github.com/Broderick-Westrope/teatime/internal/entity"
+	tea "github.com/charmbracelet/bubbletea"
+)
 
 // FatalErrorMsg encloses an error which should be set on the starter model before exiting the program.
 type FatalErrorMsg error
@@ -18,6 +21,10 @@ type SendMessageMsg struct {
 type ReceiveMessageMsg struct {
 	ConversationName string
 	Message          entity.Message
+}
+
+type OpenModalMsg struct {
+	Modal tea.Model
 }
 
 type QuitMsg struct{}

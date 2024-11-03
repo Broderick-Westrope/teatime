@@ -30,6 +30,7 @@ func NewConversationsModel(conversations []entity.Conversation, enabled bool) *C
 	delegate := NewListDelegate(DefaultListDelegateKeyMap(), styles.ListItem)
 	conversationsList := list.New(items, delegate, 0, 0)
 	conversationsList.Title = "Conversations"
+	conversationsList.DisableQuitKeybindings()
 
 	return &ConversationsModel{
 		list:   conversationsList,

@@ -5,6 +5,7 @@ import (
 
 	"github.com/Broderick-Westrope/teatime/internal/entity"
 	"github.com/Broderick-Westrope/teatime/internal/tui"
+	"github.com/Broderick-Westrope/teatime/internal/tui/modals"
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
@@ -26,6 +27,16 @@ func NewListDelegate(keys *ListDelegateKeyMap, styles list.DefaultItemStyles) li
 	}
 
 	d.UpdateFunc = func(msg tea.Msg, m *list.Model) tea.Cmd {
+		// Operations that do not require a selected conversation
+		switch msg := msg.(type) {
+		case tea.KeyMsg:
+			switch {
+			case key.Matches(msg, keys.new):
+				return tea.Batch(
+					tui.OpenModalCmd(modals.NewCreateConversationModel()))
+			}
+		}
+
 		selectedItem := m.SelectedItem()
 		if selectedItem == nil {
 			return nil
@@ -44,9 +55,6 @@ func NewListDelegate(keys *ListDelegateKeyMap, styles list.DefaultItemStyles) li
 			switch {
 			case key.Matches(msg, keys.submit):
 				return tui.SetConversationCmd(entity.Conversation(conversation))
-
-			case key.Matches(msg, keys.new):
-				return m.NewStatusMessage("Creating new")
 
 			case key.Matches(msg, keys.delete):
 				// TODO: use a cmd to open a confirmation modal before deleting this conversation

@@ -17,6 +17,7 @@ type appFocusRegion int
 const (
 	appFocusRegionContacts appFocusRegion = iota
 	appFocusRegionChat
+	appFocusRegionModal
 )
 
 var _ tea.Model = &AppModel{}
@@ -24,9 +25,12 @@ var _ tea.Model = &AppModel{}
 type AppModel struct {
 	contacts *components.ConversationsModel
 	chat     *components.ChatModel
-	focus    appFocusRegion
-	styles   *AppStyles
-	username string
+	modal    tea.Model
+
+	focus     appFocusRegion
+	prevFocus appFocusRegion
+	styles    *AppStyles
+	username  string
 }
 
 func NewAppModel(conversations []entity.Conversation, username string) *AppModel {
@@ -67,6 +71,11 @@ func (m *AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.setSize(msg.Width, msg.Height)
 		return m, nil
 
+	case tui.OpenModalMsg:
+		m.modal = msg.Modal
+		m.focus = appFocusRegionModal
+		return m, nil
+
 	case tui.SetConversationMsg:
 		// setFocus needs to be called before SetConversation since
 		// the styling needs to be updated before the viewport is refreshed
@@ -88,23 +97,24 @@ func (m *AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "esc":
-			// move from chat to contacts
-			if m.focus != appFocusRegionChat {
-				// todo: change this to a break once the list is no longer using tea.Quit for this key
+			var newFocus appFocusRegion
+			switch m.focus {
+			case appFocusRegionContacts:
 				return m, nil
+			case appFocusRegionChat:
+				newFocus = appFocusRegionContacts
+			case appFocusRegionModal:
+				newFocus = m.prevFocus
 			}
-			err := m.setFocus(appFocusRegionContacts)
+			err := m.setFocus(newFocus)
 			if err != nil {
 				return m, tui.FatalErrorCmd(err)
 			}
-			m.chat.ResetInput()
 			return m, nil
 
 		case "q":
-			// don't quit if the user types "q" in the chat
-			if m.focus == appFocusRegionChat {
-				// todo: change this to a break once the list is no longer using tea.Quit for this key
-				return m, nil
+			if m.focus != appFocusRegionContacts {
+				break
 			}
 			return m, tui.QuitCmd
 		}
@@ -129,6 +139,10 @@ func (m *AppModel) updateFocussedChild(msg tea.Msg) (tea.Cmd, error) {
 		return tui.UpdateTypedModel(&m.contacts, msg)
 	case appFocusRegionChat:
 		return tui.UpdateTypedModel(&m.chat, msg)
+	case appFocusRegionModal:
+		var cmd tea.Cmd
+		m.modal, cmd = m.modal.Update(msg)
+		return cmd, nil
 	default:
 		return nil, fmt.Errorf("unknown appFocusRegion %d", m.focus)
 	}
@@ -141,9 +155,16 @@ func (m *AppModel) setFocus(focus appFocusRegion) error {
 	case appFocusRegionContacts:
 		m.contacts.Enable()
 		m.chat.Disable()
+		m.modal = nil
+		m.chat.ResetInput()
 	case appFocusRegionChat:
 		m.chat.Enable()
 		m.contacts.Disable()
+		m.modal = nil
+	case appFocusRegionModal:
+		m.chat.Disable()
+		m.contacts.Disable()
+		m.prevFocus = m.focus
 	default:
 		return fmt.Errorf("unknown appFocusRegion %d", focus)
 	}
@@ -168,5 +189,11 @@ func (m *AppModel) View() string {
 		m.styles.Contacts.Render(m.contacts.View()),
 		m.styles.Chat.Render(m.chat.View()),
 	)
-	return m.styles.View.Render(output)
+	output = m.styles.View.Render(output)
+
+	if m.focus == appFocusRegionModal && m.modal != nil {
+		modal := m.styles.Modal.Render(m.modal.View())
+		output = tui.OverlayCenter(output, modal)
+	}
+	return output
 }
