@@ -193,7 +193,11 @@ func (m *AppModel) View() string {
 
 	if m.focus == appFocusRegionModal && m.modal != nil {
 		modal := m.styles.Modal.Render(m.modal.View())
-		output = tui.OverlayCenter(output, modal)
+		var err error
+		output, err = tui.OverlayCenter(output, modal, true)
+		if err != nil {
+			return "** FAILED TO OVERLAY MODAL **" + output
+		}
 	}
 	return output
 }
