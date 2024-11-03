@@ -31,7 +31,7 @@ func NewListDelegate(keys *ListDelegateKeyMap, styles list.DefaultItemStyles) li
 			return nil
 		}
 
-		contact, ok := selectedItem.(Conversation)
+		conversation, ok := selectedItem.(Conversation)
 		if !ok {
 			return tui.FatalErrorCmd(fmt.Errorf(
 				"list delegate failed to get selected item: %w",
@@ -43,12 +43,13 @@ func NewListDelegate(keys *ListDelegateKeyMap, styles list.DefaultItemStyles) li
 		case tea.KeyMsg:
 			switch {
 			case key.Matches(msg, keys.submit):
-				return tui.SetConversationCmd(entity.Conversation(contact))
+				return tui.SetConversationCmd(entity.Conversation(conversation))
 
 			case key.Matches(msg, keys.new):
 				return m.NewStatusMessage("Creating new")
 
 			case key.Matches(msg, keys.delete):
+				// TODO: use a cmd to open a confirmation modal before deleting this conversation
 				if m.FilterState() == list.FilterApplied {
 					return nil
 				}
@@ -56,7 +57,7 @@ func NewListDelegate(keys *ListDelegateKeyMap, styles list.DefaultItemStyles) li
 				if len(m.Items()) == 0 {
 					keys.delete.SetEnabled(false)
 				}
-				return m.NewStatusMessage("Deleted " + contact.Name)
+				return m.NewStatusMessage("Deleted " + conversation.Name)
 			}
 		}
 		return nil
