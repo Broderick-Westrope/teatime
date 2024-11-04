@@ -14,8 +14,13 @@ import (
 type Conversation entity.Conversation
 
 func (c Conversation) Title() string       { return c.Name }
-func (c Conversation) Description() string { return c.Messages[len(c.Messages)-1].Content }
 func (c Conversation) FilterValue() string { return c.Name }
+func (c Conversation) Description() string {
+	if len(c.Messages) <= 0 {
+		return ""
+	}
+	return c.Messages[len(c.Messages)-1].Content
+}
 
 func NewListDelegate(keys *ListDelegateKeyMap, styles list.DefaultItemStyles) list.DefaultDelegate {
 	d := list.NewDefaultDelegate()

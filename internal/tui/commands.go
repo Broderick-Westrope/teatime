@@ -12,6 +12,17 @@ func FatalErrorCmd(err error) tea.Cmd {
 	}
 }
 
+// CreateConversationCmd returns a command for creating a new CreateConversationMsg.
+func CreateConversationCmd(name string, participants []string, notifyParticipants bool) tea.Cmd {
+	return func() tea.Msg {
+		return CreateConversationMsg{
+			Name:               name,
+			Participants:       participants,
+			NotifyParticipants: notifyParticipants,
+		}
+	}
+}
+
 // SetConversationCmd returns a command for creating a new SetConversationMsg.
 func SetConversationCmd(contact entity.Conversation) tea.Cmd {
 	return func() tea.Msg {
@@ -30,12 +41,17 @@ func SendMessageCmd(message entity.Message, conversation entity.Conversation) te
 }
 
 // OpenModalCmd returns a command for creating a new OpenModalMsg.
-func OpenModalCmd(modal tea.Model) tea.Cmd {
+func OpenModalCmd(modal Modal) tea.Cmd {
 	return func() tea.Msg {
 		return OpenModalMsg{
 			Modal: modal,
 		}
 	}
+}
+
+// CloseModalCmd is a command for creating a new CloseModalMsg.
+func CloseModalCmd() tea.Msg {
+	return CloseModalMsg{}
 }
 
 func QuitCmd() tea.Msg {

@@ -59,6 +59,10 @@ func (m *ConversationsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
+func (m *ConversationsModel) AddNewConversation(conversation entity.Conversation) tea.Cmd {
+	return m.list.InsertItem(0, Conversation(conversation))
+}
+
 // AddNewMessage will add the given message to the chat with the given chatName.
 // It will also move this messages to the top of the contacts list and update the list selection.
 func (m *ConversationsModel) AddNewMessage(conversationName string, message entity.Message) (tea.Cmd, error) {

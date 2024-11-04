@@ -2,6 +2,7 @@ package views
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/Broderick-Westrope/teatime/internal/entity"
 	"github.com/Broderick-Westrope/teatime/internal/tui"
@@ -23,14 +24,16 @@ const (
 var _ tea.Model = &AppModel{}
 
 type AppModel struct {
-	contacts *components.ConversationsModel
-	chat     *components.ChatModel
-	modal    tea.Model
+	conversations *components.ConversationsModel
+	chat          *components.ChatModel
+	modal         tui.Modal
 
-	focus     appFocusRegion
-	prevFocus appFocusRegion
-	styles    *AppStyles
-	username  string
+	focus       appFocusRegion
+	prevFocus   appFocusRegion
+	styles      *AppStyles
+	username    string
+	modalWidth  int
+	modalHeight int
 }
 
 func NewAppModel(conversations []entity.Conversation, username string) *AppModel {
@@ -45,10 +48,11 @@ func NewAppModel(conversations []entity.Conversation, username string) *AppModel
 
 	focus := appFocusRegionContacts
 	return &AppModel{
-		contacts: components.NewConversationsModel(conversations, focus == appFocusRegionContacts),
-		chat:     components.NewChatModel(openConversation, username, focus == appFocusRegionChat),
-		focus:    focus,
-		styles:   DefaultAppStyles(),
+		conversations: components.NewConversationsModel(conversations, focus == appFocusRegionContacts),
+		chat:          components.NewChatModel(openConversation, username, focus == appFocusRegionChat),
+		focus:         focus,
+		styles:        DefaultAppStyles(),
+		username:      username,
 	}
 }
 
@@ -56,7 +60,7 @@ func (m *AppModel) Init() tea.Cmd {
 	var cmd tea.Cmd
 	var cmds []tea.Cmd
 
-	cmd = m.contacts.Init()
+	cmd = m.conversations.Init()
 	cmds = append(cmds, cmd)
 
 	cmd = m.chat.Init()
@@ -73,8 +77,40 @@ func (m *AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tui.OpenModalMsg:
 		m.modal = msg.Modal
-		m.focus = appFocusRegionModal
+		m.modal.SetSize(m.modalWidth, m.modalHeight)
+		err := m.setFocus(appFocusRegionModal)
+		if err != nil {
+			return m, tui.FatalErrorCmd(err)
+		}
 		return m, nil
+
+	case tui.CloseModalMsg:
+		m.modal = nil
+		err := m.setFocus(m.prevFocus)
+		if err != nil {
+			return m, tui.FatalErrorCmd(err)
+		}
+		return m, nil
+
+	case tui.CreateConversationMsg:
+		var cmds []tea.Cmd
+		conversation := entity.Conversation{
+			Name:         msg.Name,
+			Participants: msg.Participants,
+			Messages:     make([]entity.Message, 0),
+		}
+		cmds = append(cmds, m.conversations.AddNewConversation(conversation))
+		m.chat.SetConversation(conversation)
+
+		if msg.NotifyParticipants {
+			cmd := tui.SendMessageCmd(entity.Message{
+				Content: fmt.Sprintf("%q created this conversation 🎉", m.username),
+				Author:  m.username,
+				SentAt:  time.Now(),
+			}, conversation)
+			cmds = append(cmds, cmd)
+		}
+		return m, tea.Batch(cmds...)
 
 	case tui.SetConversationMsg:
 		// setFocus needs to be called before SetConversation since
@@ -88,7 +124,7 @@ func (m *AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tui.ReceiveMessageMsg:
 		m.chat.AddNewMessage(msg.Message)
-		cmd, err := m.contacts.AddNewMessage(msg.ConversationName, msg.Message)
+		cmd, err := m.conversations.AddNewMessage(msg.ConversationName, msg.Message)
 		if err != nil {
 			return m, tui.FatalErrorCmd(err)
 		}
@@ -128,7 +164,7 @@ func (m *AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *AppModel) GetConversations() ([]entity.Conversation, error) {
-	return m.contacts.GetConversations()
+	return m.conversations.GetConversations()
 }
 
 // updateFocussedChild uses the model state to determine which child model to update.
@@ -136,13 +172,11 @@ func (m *AppModel) GetConversations() ([]entity.Conversation, error) {
 func (m *AppModel) updateFocussedChild(msg tea.Msg) (tea.Cmd, error) {
 	switch m.focus {
 	case appFocusRegionContacts:
-		return tui.UpdateTypedModel(&m.contacts, msg)
+		return tui.UpdateTypedModel(&m.conversations, msg)
 	case appFocusRegionChat:
 		return tui.UpdateTypedModel(&m.chat, msg)
 	case appFocusRegionModal:
-		var cmd tea.Cmd
-		m.modal, cmd = m.modal.Update(msg)
-		return cmd, nil
+		return tui.UpdateTypedModel(&m.modal, msg)
 	default:
 		return nil, fmt.Errorf("unknown appFocusRegion %d", m.focus)
 	}
@@ -153,17 +187,18 @@ func (m *AppModel) updateFocussedChild(msg tea.Msg) (tea.Cmd, error) {
 func (m *AppModel) setFocus(focus appFocusRegion) error {
 	switch focus {
 	case appFocusRegionContacts:
-		m.contacts.Enable()
+		m.conversations.Enable()
 		m.chat.Disable()
 		m.modal = nil
 		m.chat.ResetInput()
 	case appFocusRegionChat:
 		m.chat.Enable()
-		m.contacts.Disable()
+		m.conversations.Disable()
 		m.modal = nil
 	case appFocusRegionModal:
+		m.modal.Init()
 		m.chat.Disable()
-		m.contacts.Disable()
+		m.conversations.Disable()
 		m.prevFocus = m.focus
 	default:
 		return fmt.Errorf("unknown appFocusRegion %d", focus)
@@ -180,13 +215,19 @@ func (m *AppModel) setSize(windowWidth, windowHeight int) {
 	contactsWidth := min(width/3, 35)
 	chatWidth := width - contactsWidth
 
-	m.contacts.SetSize(contactsWidth, height)
+	m.conversations.SetSize(contactsWidth, height)
 	m.chat.SetSize(chatWidth, height)
+
+	m.modalWidth = min(70, width)
+	m.modalHeight = height
+	if m.modal != nil {
+		m.modal.SetSize(m.modalWidth, m.modalHeight)
+	}
 }
 
 func (m *AppModel) View() string {
 	output := lipgloss.JoinHorizontal(lipgloss.Center,
-		m.styles.Contacts.Render(m.contacts.View()),
+		m.styles.Contacts.Render(m.conversations.View()),
 		m.styles.Chat.Render(m.chat.View()),
 	)
 	output = m.styles.View.Render(output)

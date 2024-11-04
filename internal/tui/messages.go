@@ -2,11 +2,17 @@ package tui
 
 import (
 	"github.com/Broderick-Westrope/teatime/internal/entity"
-	tea "github.com/charmbracelet/bubbletea"
 )
 
 // FatalErrorMsg encloses an error which should be set on the starter model before exiting the program.
 type FatalErrorMsg error
+
+// CreateConversationMsg encloses the details for creating a new conversation.
+type CreateConversationMsg struct {
+	Name               string
+	Participants       []string
+	NotifyParticipants bool
+}
 
 // SetConversationMsg encloses the contact whose conversation should be displayed the chat.
 type SetConversationMsg entity.Conversation
@@ -23,9 +29,13 @@ type ReceiveMessageMsg struct {
 	Message          entity.Message
 }
 
+// OpenModalMsg encloses a modal which should be opened on top of the current content.
 type OpenModalMsg struct {
-	Modal tea.Model
+	Modal Modal
 }
+
+// CloseModalMsg signals that any open modals should be closed.
+type CloseModalMsg struct{}
 
 type QuitMsg struct{}
 
