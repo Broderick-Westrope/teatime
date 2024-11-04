@@ -3,12 +3,101 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 	"sync"
 
+	"github.com/Broderick-Westrope/teatime/internal/entity"
 	"github.com/Broderick-Westrope/teatime/internal/websocket"
+	"github.com/Broderick-Westrope/teatime/server/internal/db"
 )
+
+func (app *application) handleSignup() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var creds entity.Credentials
+		err := json.NewDecoder(r.Body).Decode(&creds)
+		if err != nil {
+			app.log.Error("failed to unmarshal signup request body", slog.Any("error", err))
+			http.Error(w, "Invalid request payload", http.StatusBadRequest)
+			return
+		}
+
+		err = app.repo.CreateUser(creds.Username, creds.Password)
+		if err != nil {
+			app.writeInternalServerError(w, "failed to create user", err)
+			return
+		}
+
+		err = app.addNewSessionID(r.Context(), w, creds.Username)
+		if err != nil {
+			app.writeInternalServerError(w, "failed to set session ID", err)
+			return
+		}
+
+		w.WriteHeader(http.StatusCreated)
+		w.Write([]byte("User created"))
+	}
+}
+
+func (app *application) handleLogin() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var creds entity.Credentials
+		err := json.NewDecoder(r.Body).Decode(&creds)
+		if err != nil {
+			app.log.Error("failed to unmarshal login request body", slog.Any("error", err))
+			http.Error(w, "Invalid request payload", http.StatusBadRequest)
+			return
+		}
+
+		isAuthenticated, err := app.repo.AuthenticateUser(creds.Username, creds.Password)
+		if err != nil {
+			if errors.Is(err, db.ErrNotFound) {
+				app.log.Debug("user failed authentication", slog.Any("error", err))
+				http.Error(w, "Failed authentication", http.StatusUnauthorized)
+				return
+			}
+			app.writeInternalServerError(w, "failed to perform user authentication", err)
+			return
+		}
+
+		if !isAuthenticated {
+			app.log.Debug("user failed authentication")
+			http.Error(w, "Failed authentication", http.StatusUnauthorized)
+			return
+		}
+
+		err = app.addNewSessionID(r.Context(), w, creds.Username)
+		if err != nil {
+			app.writeInternalServerError(w, "failed to set session ID", err)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("Logged in"))
+	}
+}
+
+func (app *application) handleLogout() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		username, ok := r.Context().Value("username").(string)
+		if !ok {
+			app.writeInternalServerError(w, "failed to cast username to string", nil)
+			return
+		}
+
+		err := app.repo.DeleteUserSessions(r.Context(), username)
+		if err != nil {
+			app.writeInternalServerError(w, "failed to delete user sessions", err)
+			return
+		}
+
+		app.deleteSessionID(w)
+
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("Logged in"))
+	}
+}
 
 func (app *application) handleWebSocket(ctx context.Context, wg *sync.WaitGroup) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {

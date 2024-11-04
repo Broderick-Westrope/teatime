@@ -2,13 +2,13 @@ package db
 
 import (
 	"context"
-	crand "crypto/rand"
 	"database/sql"
-	"encoding/base64"
+	"errors"
 	"fmt"
 	"runtime"
 	"time"
 
+	"github.com/Broderick-Westrope/teatime/internal/secure"
 	"github.com/alexedwards/argon2id"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/redis/go-redis/v9"
@@ -16,8 +16,11 @@ import (
 
 type Repository struct {
 	db          *sql.DB
-	redis       *redis.Client
 	argonParams *argon2id.Params
+
+	redis              *redis.Client
+	redisUserPrefix    string
+	redisSessionPrefix string
 }
 
 func NewRepository(dbDSN, redisAddr string) (*Repository, error) {
@@ -28,10 +31,6 @@ func NewRepository(dbDSN, redisAddr string) (*Repository, error) {
 
 	return &Repository{
 		db: db,
-		redis: redis.NewClient(&redis.Options{
-			Addr:     redisAddr,
-			Password: "", // TODO: should I use a password?
-		}),
 		// TODO: revisit these parameters. currently using defaults
 		argonParams: &argon2id.Params{
 			Memory:      64 * 1024,
@@ -40,6 +39,12 @@ func NewRepository(dbDSN, redisAddr string) (*Repository, error) {
 			SaltLength:  16,
 			KeyLength:   32,
 		},
+		redis: redis.NewClient(&redis.Options{
+			Addr:     redisAddr,
+			Password: "", // TODO: should I use a password?
+		}),
+		redisUserPrefix:    "user:",
+		redisSessionPrefix: "session:",
 	}, nil
 }
 
@@ -89,16 +94,63 @@ func (r *Repository) AuthenticateUser(username, password string) (bool, error) {
 	return match, err
 }
 
-func (r *Repository) GetNewSessionID(username string) (string, error) {
-	b := make([]byte, 32) // 256-bit session ID
-	_, err := crand.Read(b)
+func (r *Repository) GetNewSessionID(ctx context.Context, username string) (string, error) {
+	oldSessionID, err := r.redis.Get(ctx, r.redisUserPrefix+username).Result()
+	if err == nil {
+		// Delete the old session ID
+		err = r.redis.Del(ctx, r.redisSessionPrefix+oldSessionID).Err()
+		if err != nil {
+			return "", err
+		}
+	}
+
+	sessionID, err := secure.GenerateSessionID()
 	if err != nil {
 		return "", err
 	}
-	sessID := base64.URLEncoding.EncodeToString(b)
 
 	// TODO: look into using the expiration
-	r.redis.Set(context.Background(), username, sessID, 0)
+	err = r.redis.Set(ctx, r.redisSessionPrefix+sessionID, username, 0).Err()
+	if err != nil {
+		return "", err
+	}
 
-	return sessID, nil
+	err = r.redis.Set(ctx, r.redisUserPrefix+username, sessionID, 0).Err()
+	if err != nil {
+		return "", err
+	}
+	return sessionID, nil
+}
+
+func (r *Repository) GetUsernameWithSessionID(ctx context.Context, sessionID string) (string, error) {
+	username, err := r.redis.Get(ctx, r.redisSessionPrefix+sessionID).Result()
+	if err != nil {
+		return "", err
+	}
+
+	storedSessionID, err := r.redis.Get(ctx, r.redisUserPrefix+username).Result()
+	switch {
+	case err != nil:
+		return "", err
+	case storedSessionID != sessionID:
+		return "", errors.New("provided session ID does not match stored session ID")
+	}
+	return username, nil
+}
+
+func (r *Repository) DeleteUserSessions(ctx context.Context, username string) error {
+	sessionID, err := r.redis.Get(ctx, r.redisUserPrefix+username).Result()
+	if err != nil {
+		return err
+	}
+
+	err = r.redis.Del(ctx, r.redisUserPrefix+username).Err()
+	if err != nil {
+		return err
+	}
+	err = r.redis.Del(ctx, r.redisSessionPrefix+sessionID).Err()
+	if err != nil {
+		return err
+	}
+	return nil
 }

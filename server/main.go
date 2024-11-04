@@ -41,7 +41,7 @@ func newApp() (*application, error) {
 
 	return &application{
 		hub:  websocket.NewHub(),
-		log:  slog.New(slog.NewTextHandler(os.Stdout, nil)),
+		log:  slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug})),
 		repo: repo,
 	}, nil
 }
@@ -61,10 +61,24 @@ func main() {
 
 	server := &http.Server{
 		Addr:    serverAddress,
-		Handler: r,
+		Handler: app.setupRouter(ctx, wg),
 	}
 	go app.startServer(server)
 	app.handleShutdown(server, cancelCtx, wg)
+}
+
+func (app *application) setupRouter(ctx context.Context, wg *sync.WaitGroup) chi.Router {
+	r := chi.NewRouter()
+
+	r.Route("/auth", func(r chi.Router) {
+		r.Get("/signup", app.handleSignup())
+		r.Get("/login", app.handleLogin())
+		r.With(app.authMiddleware()).Get("/logout", app.handleLogout())
+	})
+
+	r.With(app.authMiddleware()).Get("/ws", app.handleWebSocket(ctx, wg))
+
+	return r
 }
 
 func (app *application) startServer(server *http.Server) {
