@@ -13,8 +13,8 @@ import (
 
 type Conversation entity.Conversation
 
-func (c Conversation) Title() string       { return c.Name }
-func (c Conversation) FilterValue() string { return c.Name }
+func (c Conversation) Title() string       { return c.Metadata.Name }
+func (c Conversation) FilterValue() string { return c.Metadata.Name }
 func (c Conversation) Description() string {
 	if len(c.Messages) <= 0 {
 		return ""
@@ -70,7 +70,7 @@ func NewListDelegate(keys *ListDelegateKeyMap, styles list.DefaultItemStyles) li
 				if len(m.Items()) == 0 {
 					keys.delete.SetEnabled(false)
 				}
-				return m.NewStatusMessage("Deleted " + conversation.Name)
+				return m.NewStatusMessage("Deleted " + conversation.Metadata.Name)
 			}
 		}
 		return nil

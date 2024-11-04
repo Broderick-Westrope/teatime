@@ -19,14 +19,14 @@ type SetConversationMsg entity.Conversation
 
 // SendMessageMsg encloses a new message that needs to be persisted locally and sent to the conversation participants.
 type SendMessageMsg struct {
-	Message      entity.Message
-	Conversation entity.Conversation
+	Message        entity.Message
+	ConversationMD entity.ConversationMetadata
 }
 
 // ReceiveMessageMsg encloses a new message that needs to be persisted locally.
 type ReceiveMessageMsg struct {
-	ConversationName string
-	Message          entity.Message
+	ConversationMD entity.ConversationMetadata
+	Message        entity.Message
 }
 
 // OpenModalMsg encloses a modal which should be opened on top of the current content.

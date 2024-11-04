@@ -9,6 +9,7 @@ import (
 	"github.com/Broderick-Westrope/teatime/internal/tui/components"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/google/uuid"
 )
 
 // An appFocusRegion is an enum representing a top-level component within the app
@@ -38,9 +39,12 @@ type AppModel struct {
 
 func NewAppModel(conversations []entity.Conversation, username string) *AppModel {
 	openConversation := entity.Conversation{
-		Name:         "",
-		Participants: nil,
-		Messages:     nil,
+		Metadata: entity.ConversationMetadata{
+			ID:           uuid.New(),
+			Name:         "",
+			Participants: nil,
+		},
+		Messages: nil,
 	}
 	if len(conversations) > 0 {
 		openConversation = conversations[0]
@@ -95,9 +99,12 @@ func (m *AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tui.CreateConversationMsg:
 		var cmds []tea.Cmd
 		conversation := entity.Conversation{
-			Name:         msg.Name,
-			Participants: msg.Participants,
-			Messages:     make([]entity.Message, 0),
+			Metadata: entity.ConversationMetadata{
+				ID:           uuid.New(),
+				Name:         msg.Name,
+				Participants: msg.Participants,
+			},
+			Messages: make([]entity.Message, 0),
 		}
 		cmds = append(cmds, m.conversations.AddNewConversation(conversation))
 		m.chat.SetConversation(conversation)
@@ -107,7 +114,7 @@ func (m *AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				Content: fmt.Sprintf("%q created this conversation 🎉", m.username),
 				Author:  m.username,
 				SentAt:  time.Now(),
-			}, conversation)
+			}, conversation.Metadata)
 			cmds = append(cmds, cmd)
 		}
 		return m, tea.Batch(cmds...)
@@ -124,7 +131,7 @@ func (m *AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tui.ReceiveMessageMsg:
 		m.chat.AddNewMessage(msg.Message)
-		cmd, err := m.conversations.AddNewMessage(msg.ConversationName, msg.Message)
+		cmd, err := m.conversations.AddNewMessage(msg.ConversationMD, msg.Message)
 		if err != nil {
 			return m, tui.FatalErrorCmd(err)
 		}

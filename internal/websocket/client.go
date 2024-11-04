@@ -99,16 +99,16 @@ func (c *Client) ReadMessage() (*Msg, error) {
 	return &msg, err
 }
 
-func (c *Client) SendChatMessage(message entity.Message, conversationName string, recipients []string) error {
+func (c *Client) SendChatMessage(message entity.Message, conversationMD entity.ConversationMetadata, recipients []string) error {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
 	return c.conn.WriteJSON(Msg{
 		Type: MsgTypeSendChatMessage,
 		Payload: PayloadSendChatMessage{
-			ConversationName: conversationName,
-			Recipients:       recipients,
-			Message:          message,
+			ConversationMD: conversationMD,
+			Message:        message,
+			Recipients:     recipients,
 		},
 	})
 }

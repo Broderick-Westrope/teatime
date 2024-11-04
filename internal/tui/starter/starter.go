@@ -66,7 +66,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tui.QuitCmd
 
 	case tui.SendMessageMsg:
-		return m, m.SendMessage(msg.Message, msg.Conversation)
+		return m, m.SendMessage(msg.Message, msg.ConversationMD)
 
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -86,16 +86,16 @@ func (m *Model) View() string {
 
 // SendMessage persists the given message locally and sends it over the relevant WebSocket connections.
 // The conversation participants is used to identify which WebSocket clients should receive this message.
-func (m *Model) SendMessage(msg entity.Message, conversation entity.Conversation) tea.Cmd {
+func (m *Model) SendMessage(msg entity.Message, conversationMD entity.ConversationMetadata) tea.Cmd {
 	// Add message locally
 	var cmd tea.Cmd
 	m.child, cmd = m.child.Update(tui.ReceiveMessageMsg{
-		ConversationName: conversation.Name,
-		Message:          msg,
+		ConversationMD: conversationMD,
+		Message:        msg,
 	})
 
 	// Send message to recipients via WebSockets
-	recipients := conversation.Participants
+	recipients := conversationMD.Participants
 	for i, v := range recipients {
 		if v == msg.Author {
 			recipients = append(recipients[:i], recipients[i+1:]...)
@@ -103,12 +103,7 @@ func (m *Model) SendMessage(msg entity.Message, conversation entity.Conversation
 		}
 	}
 
-	conversationName := conversation.Name
-	if len(recipients) == 1 {
-		conversationName = msg.Author
-	}
-
-	err := m.wsClient.SendChatMessage(msg, conversationName, recipients)
+	err := m.wsClient.SendChatMessage(msg, conversationMD, recipients)
 	if err != nil {
 		return tui.FatalErrorCmd(fmt.Errorf("failed to send chat message: %v\n", err))
 	}

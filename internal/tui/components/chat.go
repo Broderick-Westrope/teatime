@@ -77,7 +77,7 @@ func (m *ChatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				SentAt:  time.Now(),
 			}
 			m.input.Reset()
-			return m, tui.SendMessageCmd(newMsg, m.conversation)
+			return m, tui.SendMessageCmd(newMsg, m.conversation.Metadata)
 		}
 	}
 
@@ -164,7 +164,7 @@ func (m *ChatModel) View() string {
 
 // viewHeader returns the styled output for the header.
 func (m *ChatModel) viewHeader() string {
-	return m.styles.Header.Render(m.conversation.Name) + "\n"
+	return m.styles.Header.Render(m.conversation.Metadata.Name) + "\n"
 }
 
 // viewConversation returns the styled output for the messages.

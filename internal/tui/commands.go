@@ -31,11 +31,11 @@ func SetConversationCmd(contact entity.Conversation) tea.Cmd {
 }
 
 // SendMessageCmd returns a command for creating a new SendMessageMsg.
-func SendMessageCmd(message entity.Message, conversation entity.Conversation) tea.Cmd {
+func SendMessageCmd(message entity.Message, conversationMD entity.ConversationMetadata) tea.Cmd {
 	return func() tea.Msg {
 		return SendMessageMsg{
-			Message:      message,
-			Conversation: conversation,
+			Message:        message,
+			ConversationMD: conversationMD,
 		}
 	}
 }

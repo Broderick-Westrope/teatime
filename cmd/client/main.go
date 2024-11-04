@@ -9,10 +9,8 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"time"
 
 	"github.com/Broderick-Westrope/teatime/internal/db"
-	"github.com/Broderick-Westrope/teatime/internal/entity"
 	"github.com/Broderick-Westrope/teatime/internal/tui"
 	"github.com/Broderick-Westrope/teatime/internal/tui/starter"
 	"github.com/Broderick-Westrope/teatime/internal/websocket"
@@ -135,9 +133,12 @@ func (app *application) readFromWebSocket() {
 
 		switch payload := msg.Payload.(type) {
 		case websocket.PayloadSendChatMessage:
+			if payload.ConversationMD.Name == app.username {
+				payload.ConversationMD.Name = payload.Message.Author
+			}
 			app.msgCh <- tui.ReceiveMessageMsg{
-				ConversationName: payload.ConversationName,
-				Message:          payload.Message,
+				ConversationMD: payload.ConversationMD,
+				Message:        payload.Message,
 			}
 		default:
 			app.log.Error("unknown WebSocket message payload", slog.Int("msg_type", int(msg.Type)))
@@ -189,72 +190,6 @@ func setupDatabaseFile() (string, error) {
 		}
 	}
 	return path, nil
-}
-
-func getTestData() []entity.Conversation {
-	time1, _ := time.Parse(time.RFC1123, "Sun, 12 Dec 2021 12:23:00 UTC")
-	time2, _ := time.Parse(time.RFC1123, "Sun, 13 Dec 2021 12:23:00 UTC")
-	conversations := []entity.Conversation{
-		{
-			Name: "TEST CHAT",
-			Participants: []string{
-				"Sally.Sender",
-				"Robby.Receiver",
-				// With only two people the conversation name is the other persons name.
-				// This is not possible with hardcoded test data. The solution is to add a third,
-				// unused person so that the manually set conversation name will be used.
-				"A third person",
-			},
-			Messages: []entity.Message{
-				{
-					Author:  "Sally.Sender",
-					Content: "Doloribus eligendi at velit qui.",
-					SentAt:  time1,
-				},
-				{
-					Author:  "Robby.Receiver",
-					Content: "Earum similique tempore. Ullam animi hic repudiandae. Amet id voluptas id error veritatis tenetur incidunt quidem nihil. Eius facere nostrum expedita eum.\nDucimus in temporibus non. Voluptatum enim odio cupiditate error est aspernatur eligendi. Ea iure tenetur nam. Nemo quo veritatis iusto maiores illum modi necessitatibus. Sunt minus ab.\nOfficia deserunt omnis velit aliquid facere sit. Vel rem atque. Veniam dolores corporis quasi sit deserunt minus molestias sunt.",
-					SentAt:  time2,
-				},
-			},
-		},
-		{
-			Name: "Sherwood27",
-			Participants: []string{
-				"Sherwood27",
-				"Sally.Sender",
-			},
-			Messages: []entity.Message{
-				{
-					Author:  "Sherwood27",
-					Content: "provident nesciunt sit",
-				},
-			},
-		},
-		{
-			Name: "Rick48",
-			Participants: []string{
-				"Rick48",
-				"Robby.Receiver",
-			},
-			Messages: []entity.Message{
-				{
-					Author:  "Rick48",
-					Content: "Nulla eaque molestias molestiae porro iusto. Laboriosam sequi laborum autem harum iste ex. Autem minus pariatur soluta voluptatum. Quis dolores cumque atque quisquam unde. Aliquid officia veritatis nihil voluptate dolorum. Delectus recusandae natus ratione animi.\nQuasi unde dolor modi est libero quo quam iste eum. Itaque facere dolore dignissimos placeat. Cumque magni quia reprehenderit voluptas sequi voluptatum reprehenderit.\nAsperiores dolorum eum animi tempora laudantium autem. Omnis quidem atque laboriosam maiores laudantium. Fuga possimus mollitia amet adipisci rerum. Excepturi blanditiis libero modi harum sed. Error quisquam rem ab.\nIpsum nam quasi exercitationem.\nMagni harum ipsum sit.\nA odit iusto provident.\nEaque eveniet tenetur porro tempora sint aut labore qui ea.",
-				},
-				{
-					Author:  "Rick48",
-					Content: "Nulla eaque molestias molestiae porro iusto. Laboriosam sequi laborum autem harum iste ex. Autem minus pariatur soluta voluptatum. Quis dolores cumque atque quisquam unde. Aliquid officia veritatis nihil voluptate dolorum. Delectus recusandae natus ratione animi.\nQuasi unde dolor modi est libero quo quam iste eum. Itaque facere dolore dignissimos placeat. Cumque magni quia reprehenderit voluptas sequi voluptatum reprehenderit.\nAsperiores dolorum eum animi tempora laudantium autem. Omnis quidem atque laboriosam maiores laudantium. Fuga possimus mollitia amet adipisci rerum. Excepturi blanditiis libero modi harum sed. Error quisquam rem ab.\nIpsum nam quasi exercitationem.\nMagni harum ipsum sit.\nA odit iusto provident.\nEaque eveniet tenetur porro tempora sint aut labore qui ea.",
-				},
-				{
-					Author:  "Robby.Receiver",
-					Content: "Nulla eaque molestias molestiae porro iusto. Laboriosam sequi laborum autem harum iste ex. Autem minus pariatur soluta voluptatum. Quis dolores cumque atque quisquam unde. Aliquid officia veritatis nihil voluptate dolorum. Delectus recusandae natus ratione animi.\nQuasi unde dolor modi est libero quo quam iste eum. Itaque facere dolore dignissimos placeat. Cumque magni quia reprehenderit voluptas sequi voluptatum reprehenderit.\nAsperiores dolorum eum animi tempora laudantium autem. Omnis quidem atque laboriosam maiores laudantium. Fuga possimus mollitia amet adipisci rerum. Excepturi blanditiis libero modi harum sed. Error quisquam rem ab.\nIpsum nam quasi exercitationem.\nMagni harum ipsum sit.\nA odit iusto provident.\nEaque eveniet tenetur porro tempora sint aut labore qui ea.",
-				},
-			},
-		},
-	}
-
-	return conversations
 }
 
 func sanitizePathString(username string) string {

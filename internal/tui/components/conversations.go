@@ -65,7 +65,7 @@ func (m *ConversationsModel) AddNewConversation(conversation entity.Conversation
 
 // AddNewMessage will add the given message to the chat with the given chatName.
 // It will also move this messages to the top of the contacts list and update the list selection.
-func (m *ConversationsModel) AddNewMessage(conversationName string, message entity.Message) (tea.Cmd, error) {
+func (m *ConversationsModel) AddNewMessage(conversationMD entity.ConversationMetadata, message entity.Message) (tea.Cmd, error) {
 	const methodErr = "failed to add new message to conversation"
 	foundIdx := -1
 	items := m.list.Items()
@@ -76,7 +76,7 @@ func (m *ConversationsModel) AddNewMessage(conversationName string, message enti
 			return nil, fmt.Errorf("%s: (list item) %v", methodErr, tui.ErrInvalidTypeAssertion)
 		}
 
-		if conversation.Name != conversationName {
+		if conversation.Metadata.ID != conversationMD.ID {
 			continue
 		}
 
@@ -88,14 +88,24 @@ func (m *ConversationsModel) AddNewMessage(conversationName string, message enti
 
 	switch {
 	case foundIdx < 0:
-		return nil, fmt.Errorf("%s: could not find conversation with name %q", methodErr, conversationName)
-	case foundIdx != 0: // if the conversation is not already first in the list, move it to first
+		item := Conversation{
+			Metadata: conversationMD,
+			Messages: []entity.Message{message},
+		}
+		items = append([]list.Item{item}, items...)
+		m.list.Select(0)
+		return m.list.SetItems(items), nil
+
+	case foundIdx == 0: // already first
+		return m.list.SetItems(items), nil
+
+	default: // if the conversation is not already first in the list, move it to first
 		item := items[foundIdx]
 		items = append(items[:foundIdx], items[foundIdx+1:]...)
 		items = append([]list.Item{item}, items...)
 		m.list.Select(0)
+		return m.list.SetItems(items), nil
 	}
-	return m.list.SetItems(items), nil
 }
 
 func (m *ConversationsModel) GetConversations() ([]entity.Conversation, error) {

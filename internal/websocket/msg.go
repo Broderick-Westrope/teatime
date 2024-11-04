@@ -23,9 +23,9 @@ type MsgPayload interface {
 }
 
 type PayloadSendChatMessage struct {
-	ConversationName string         `json:"chat_name"`
-	Recipients       []string       `json:"recipient_usernames"`
-	Message          entity.Message `json:"message"`
+	ConversationMD entity.ConversationMetadata `json:"conversation_metadata"`
+	Message        entity.Message              `json:"message"`
+	Recipients     []string                    `json:"recipients"`
 }
 
 func (PayloadSendChatMessage) isWebSocketMsgPayload() {}
