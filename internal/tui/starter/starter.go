@@ -28,13 +28,14 @@ type Model struct {
 }
 
 func NewModel(username, password string, wsClient *websocket.Client, repo *db.Repository, messagesLog io.Writer) (*Model, error) {
-	conversations, err := repo.GetConversations(username, password)
-	if err != nil {
-		return nil, err
-	}
+	//conversations, err := repo.GetConversations(username, password)
+	//if err != nil {
+	//	return nil, err
+	//}
 
 	return &Model{
-		child:       views.NewAppModel(conversations, username),
+		//child:       views.NewAppModel(conversations, username),
+		child:       views.NewLockModel(),
 		wsClient:    wsClient,
 		repo:        repo,
 		messagesLog: messagesLog,
@@ -50,10 +51,18 @@ func (m *Model) Init() tea.Cmd {
 
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if m.messagesLog != nil {
+		authMsg, ok := msg.(tui.AuthenticateMsg)
+		if ok {
+			authMsg.Password = "**REDACTED**"
+			spew.Fdump(m.messagesLog, authMsg)
+		}
 		spew.Fdump(m.messagesLog, msg)
 	}
 
 	switch msg := msg.(type) {
+	case tui.AuthenticateMsg:
+		m.authenticate(msg.IsSignup, msg.Username, msg.Password)
+
 	case tui.QuitMsg:
 		err := m.saveUserData()
 		if err != nil {
@@ -63,15 +72,16 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tui.FatalErrorMsg:
 		m.ExitError = msg
-		return m, tui.QuitCmd
+		_ = m.saveUserData()
+		return m, tea.Quit
 
 	case tui.SendMessageMsg:
-		return m, m.SendMessage(msg.Message, msg.ConversationMD)
+		return m, m.sendMessage(msg.Message, msg.ConversationMD)
 
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "ctrl+c":
-			return m, tui.QuitCmd
+			return m, tea.Quit
 		}
 	}
 
@@ -84,9 +94,9 @@ func (m *Model) View() string {
 	return m.child.View()
 }
 
-// SendMessage persists the given message locally and sends it over the relevant WebSocket connections.
+// sendMessage persists the given message locally and sends it over the relevant WebSocket connections.
 // The conversation participants is used to identify which WebSocket clients should receive this message.
-func (m *Model) SendMessage(msg entity.Message, conversationMD entity.ConversationMetadata) tea.Cmd {
+func (m *Model) sendMessage(msg entity.Message, conversationMD entity.ConversationMetadata) tea.Cmd {
 	// Add message locally
 	var cmd tea.Cmd
 	m.child, cmd = m.child.Update(tui.ReceiveMessageMsg{
@@ -109,6 +119,12 @@ func (m *Model) SendMessage(msg entity.Message, conversationMD entity.Conversati
 	}
 
 	return cmd
+}
+
+func (m *Model) authenticate(isSignup bool, username, password string) tea.Cmd {
+	//client := http.Client{}
+
+	return nil
 }
 
 func (m *Model) saveUserData() error {

@@ -12,6 +12,17 @@ func FatalErrorCmd(err error) tea.Cmd {
 	}
 }
 
+// AuthenticateCmd returns a command for creating a new AuthenticateMsg.
+func AuthenticateCmd(isSignup bool, username, password string) tea.Cmd {
+	return func() tea.Msg {
+		return AuthenticateMsg{
+			IsSignup: isSignup,
+			Username: username,
+			Password: password,
+		}
+	}
+}
+
 // CreateConversationCmd returns a command for creating a new CreateConversationMsg.
 func CreateConversationCmd(name string, participants []string, notifyParticipants bool) tea.Cmd {
 	return func() tea.Msg {

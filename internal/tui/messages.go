@@ -7,6 +7,13 @@ import (
 // FatalErrorMsg encloses an error which should be set on the starter model before exiting the program.
 type FatalErrorMsg error
 
+// AuthenticateMsg encloses the details for attempting authentication.
+type AuthenticateMsg struct {
+	IsSignup bool
+	Username string
+	Password string
+}
+
 // CreateConversationMsg encloses the details for creating a new conversation.
 type CreateConversationMsg struct {
 	Name               string
