@@ -10,6 +10,7 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/google/uuid"
 )
 
 var _ tea.Model = &ChatModel{}
@@ -96,6 +97,10 @@ func (m *ChatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m *ChatModel) SetConversation(conversation entity.Conversation) {
 	m.conversation = conversation
 	m.refreshViewportContent()
+}
+
+func (m *ChatModel) GetConversationID() uuid.UUID {
+	return m.conversation.Metadata.ID
 }
 
 func (m *ChatModel) AddNewMessage(msg entity.Message) {

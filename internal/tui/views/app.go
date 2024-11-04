@@ -22,6 +22,15 @@ const (
 	appFocusRegionModal
 )
 
+var emptyConversation = entity.Conversation{
+	Metadata: entity.ConversationMetadata{
+		ID:           uuid.New(),
+		Name:         "",
+		Participants: nil,
+	},
+	Messages: nil,
+}
+
 var _ tea.Model = &AppModel{}
 
 type AppModel struct {
@@ -38,14 +47,7 @@ type AppModel struct {
 }
 
 func NewAppModel(conversations []entity.Conversation, username string) *AppModel {
-	openConversation := entity.Conversation{
-		Metadata: entity.ConversationMetadata{
-			ID:           uuid.New(),
-			Name:         "",
-			Participants: nil,
-		},
-		Messages: nil,
-	}
+	openConversation := emptyConversation
 	if len(conversations) > 0 {
 		openConversation = conversations[0]
 	}
@@ -118,6 +120,22 @@ func (m *AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cmds = append(cmds, cmd)
 		}
 		return m, tea.Batch(cmds...)
+
+	case tui.DeleteConversationMsg:
+		if m.chat.GetConversationID() == msg.ConversationMD.ID {
+			m.chat.SetConversation(entity.Conversation{
+				Metadata: entity.ConversationMetadata{
+					ID:           uuid.New(),
+					Name:         "",
+					Participants: nil,
+				},
+				Messages: nil,
+			})
+		}
+		err := m.conversations.RemoveConversation(msg.ConversationMD)
+		if err != nil {
+			return m, tui.FatalErrorCmd(err)
+		}
 
 	case tui.SetConversationMsg:
 		// setFocus needs to be called before SetConversation since

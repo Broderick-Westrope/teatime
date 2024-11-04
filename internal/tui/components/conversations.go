@@ -66,14 +66,13 @@ func (m *ConversationsModel) AddNewConversation(conversation entity.Conversation
 // AddNewMessage will add the given message to the chat with the given chatName.
 // It will also move this messages to the top of the contacts list and update the list selection.
 func (m *ConversationsModel) AddNewMessage(conversationMD entity.ConversationMetadata, message entity.Message) (tea.Cmd, error) {
-	const methodErr = "failed to add new message to conversation"
 	foundIdx := -1
 	items := m.list.Items()
 
 	for i, item := range items {
 		conversation, ok := item.(Conversation)
 		if !ok {
-			return nil, fmt.Errorf("%s: (list item) %v", methodErr, tui.ErrInvalidTypeAssertion)
+			return nil, fmt.Errorf("failed to add new message to conversation: (list item) %v", tui.ErrInvalidTypeAssertion)
 		}
 
 		if conversation.Metadata.ID != conversationMD.ID {
@@ -106,6 +105,23 @@ func (m *ConversationsModel) AddNewMessage(conversationMD entity.ConversationMet
 		m.list.Select(0)
 		return m.list.SetItems(items), nil
 	}
+}
+
+func (m *ConversationsModel) RemoveConversation(conversationMD entity.ConversationMetadata) error {
+	items := m.list.Items()
+
+	for i, item := range items {
+		conversation, ok := item.(Conversation)
+		if !ok {
+			return fmt.Errorf("failed to remove conversation: (list item) %v", tui.ErrInvalidTypeAssertion)
+		}
+
+		if conversation.Metadata.ID == conversationMD.ID {
+			m.list.RemoveItem(i)
+			break
+		}
+	}
+	return nil
 }
 
 func (m *ConversationsModel) GetConversations() ([]entity.Conversation, error) {

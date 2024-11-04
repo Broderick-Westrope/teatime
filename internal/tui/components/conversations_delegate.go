@@ -37,8 +37,7 @@ func NewListDelegate(keys *ListDelegateKeyMap, styles list.DefaultItemStyles) li
 		case tea.KeyMsg:
 			switch {
 			case key.Matches(msg, keys.new):
-				return tea.Batch(
-					tui.OpenModalCmd(modals.NewCreateConversationModel()))
+				return tui.OpenModalCmd(modals.NewCreateConversationModel())
 			}
 		}
 
@@ -66,11 +65,9 @@ func NewListDelegate(keys *ListDelegateKeyMap, styles list.DefaultItemStyles) li
 				if m.FilterState() == list.FilterApplied {
 					return nil
 				}
-				m.RemoveItem(m.Index())
-				if len(m.Items()) == 0 {
-					keys.delete.SetEnabled(false)
-				}
-				return m.NewStatusMessage("Deleted " + conversation.Metadata.Name)
+
+				//m.RemoveItem(m.Index())
+				return tui.OpenModalCmd(modals.NewDeleteConversationModel(conversation.Metadata))
 			}
 		}
 		return nil

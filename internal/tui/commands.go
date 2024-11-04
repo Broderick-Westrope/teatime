@@ -23,6 +23,15 @@ func CreateConversationCmd(name string, participants []string, notifyParticipant
 	}
 }
 
+// DeleteConversationCmd returns a command for creating a new CreateConversationMsg.
+func DeleteConversationCmd(conversationMD entity.ConversationMetadata) tea.Cmd {
+	return func() tea.Msg {
+		return DeleteConversationMsg{
+			ConversationMD: conversationMD,
+		}
+	}
+}
+
 // SetConversationCmd returns a command for creating a new SetConversationMsg.
 func SetConversationCmd(contact entity.Conversation) tea.Cmd {
 	return func() tea.Msg {

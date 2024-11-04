@@ -14,6 +14,11 @@ type CreateConversationMsg struct {
 	NotifyParticipants bool
 }
 
+// DeleteConversationMsg encloses the conversation to be deleted.
+type DeleteConversationMsg struct {
+	ConversationMD entity.ConversationMetadata
+}
+
 // SetConversationMsg encloses the contact whose conversation should be displayed the chat.
 type SetConversationMsg entity.Conversation
 

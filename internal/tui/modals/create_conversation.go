@@ -10,12 +10,12 @@ import (
 )
 
 const (
-	formKey_chatName           = "chat_name"
+	formKey_conversationName   = "conversation_name"
 	formKey_participants       = "participants"
 	formKey_notifyParticipants = "notify_participants"
 )
 
-var _ tea.Model = &CreateConversationModel{}
+var _ tui.Modal = &CreateConversationModel{}
 
 type CreateConversationModel struct {
 	form                   *huh.Form
@@ -26,8 +26,8 @@ func NewCreateConversationModel() *CreateConversationModel {
 	return &CreateConversationModel{
 		form: huh.NewForm(
 			huh.NewGroup(
-				huh.NewInput().Key(formKey_chatName).
-					Title("Chat Name").
+				huh.NewInput().Key(formKey_conversationName).
+					Title("Conversation Name").
 					CharLimit(100),
 				huh.NewText().Key(formKey_participants).
 					Title("Participants").
@@ -67,7 +67,7 @@ func (m *CreateConversationModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m *CreateConversationModel) announceCompletion() tea.Cmd {
 	m.hasAnnouncedCompletion = true
 
-	chatName := m.form.GetString(formKey_chatName)
+	chatName := m.form.GetString(formKey_conversationName)
 	participants := strings.Split(m.form.GetString(formKey_participants), "\n")
 	notifyParticipants := m.form.GetBool(formKey_notifyParticipants)
 
