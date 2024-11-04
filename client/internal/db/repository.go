@@ -47,7 +47,7 @@ func initDB(dataSourceName string) (*sql.DB, error) {
 	// Create the user_conversations table if it doesn't exist
 	createTableSQL := `
 	CREATE TABLE IF NOT EXISTS user_conversations (
-		Username TEXT PRIMARY KEY,
+		username TEXT PRIMARY KEY,
 		ciphertext TEXT NOT NULL,
 		encryption_params TEXT NOT NULL,
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -97,7 +97,7 @@ func (r *Repository) GetConversations(username, password string) ([]entity.Conve
 	return conversations, nil
 }
 
-func (r *Repository) SetConversations(username, password string, conversations []entity.Conversation) error {
+func (r *Repository) UpdateConversations(username, password string, conversations []entity.Conversation) error {
 	uc, err := getUserConversations(r.db, username)
 	if err != nil {
 		return err

@@ -136,6 +136,6 @@ func (m *Model) saveUserData() error {
 	if err != nil {
 		return err
 	}
-	err = m.repo.SetConversations(m.username, m.password, conversations)
+	err = m.repo.UpdateConversations(m.username, m.password, conversations)
 	return err
 }

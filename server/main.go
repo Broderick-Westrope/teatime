@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -12,28 +13,46 @@ import (
 	"time"
 
 	"github.com/Broderick-Westrope/teatime/internal/websocket"
+	"github.com/Broderick-Westrope/teatime/server/internal/db"
+	"github.com/adrg/xdg"
 	"github.com/go-chi/chi/v5"
 )
 
 const serverAddress = ":8080"
 
 type application struct {
-	hub *websocket.Hub
-	log *slog.Logger
+	hub  *websocket.Hub
+	log  *slog.Logger
+	repo *db.Repository
 }
 
-func newApp() *application {
-	return &application{
-		hub: websocket.NewHub(),
-		log: slog.New(slog.NewTextHandler(os.Stdout, nil)),
+func newApp() (*application, error) {
+	databaseFilePath, err := setupDatabaseFile()
+	if err != nil {
+		return nil, fmt.Errorf("failed to setup database file: %w", err)
 	}
+	repo, err := db.NewRepository(fmt.Sprintf("file:%s", databaseFilePath))
+	if err != nil {
+		return nil, fmt.Errorf("failed to setup database repository: %w", err)
+	}
+
+	return &application{
+		hub:  websocket.NewHub(),
+		log:  slog.New(slog.NewTextHandler(os.Stdout, nil)),
+		repo: repo,
+	}, nil
 }
 
 func main() {
 	ctx, cancelCtx := context.WithCancel(context.Background())
-	app := newApp()
-	r := chi.NewRouter()
 	wg := &sync.WaitGroup{}
+	r := chi.NewRouter()
+
+	app, err := newApp()
+	if err != nil {
+		_, _ = fmt.Fprintf(os.Stderr, "failed to create application: %s", err)
+		os.Exit(1)
+	}
 
 	r.Get("/ws", app.handleWebSocket(ctx, wg))
 
@@ -71,4 +90,24 @@ func (app *application) handleShutdown(server *http.Server, cancelCtx context.Ca
 		os.Exit(1)
 	}
 	app.log.Info("graceful shutdown complete")
+}
+
+func setupDatabaseFile() (string, error) {
+	path, err := xdg.DataFile("TeaTime/server.db")
+	if err != nil {
+		return "", err
+	}
+
+	_, err = os.Stat(path)
+	if err != nil {
+		if !errors.Is(err, os.ErrNotExist) {
+			return "", err
+		}
+
+		_, err = os.Create(path)
+		if err != nil {
+			return "", err
+		}
+	}
+	return path, nil
 }
