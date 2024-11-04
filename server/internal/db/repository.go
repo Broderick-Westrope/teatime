@@ -1,28 +1,37 @@
 package db
 
 import (
+	"context"
+	crand "crypto/rand"
 	"database/sql"
+	"encoding/base64"
 	"fmt"
 	"runtime"
 	"time"
 
 	"github.com/alexedwards/argon2id"
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/redis/go-redis/v9"
 )
 
 type Repository struct {
 	db          *sql.DB
+	redis       *redis.Client
 	argonParams *argon2id.Params
 }
 
-func NewRepository(dataSourceName string) (*Repository, error) {
-	db, err := initDB(dataSourceName)
+func NewRepository(dbDSN, redisAddr string) (*Repository, error) {
+	db, err := initDB(dbDSN)
 	if err != nil {
 		return nil, err
 	}
 
 	return &Repository{
 		db: db,
+		redis: redis.NewClient(&redis.Options{
+			Addr:     redisAddr,
+			Password: "", // TODO: should I use a password?
+		}),
 		// TODO: revisit these parameters. currently using defaults
 		argonParams: &argon2id.Params{
 			Memory:      64 * 1024,
@@ -78,4 +87,18 @@ func (r *Repository) AuthenticateUser(username, password string) (bool, error) {
 
 	match, _, err := argon2id.CheckHash(password, user.PasswordHash)
 	return match, err
+}
+
+func (r *Repository) GetNewSessionID(username string) (string, error) {
+	b := make([]byte, 32) // 256-bit session ID
+	_, err := crand.Read(b)
+	if err != nil {
+		return "", err
+	}
+	sessID := base64.URLEncoding.EncodeToString(b)
+
+	// TODO: look into using the expiration
+	r.redis.Set(context.Background(), username, sessID, 0)
+
+	return sessID, nil
 }

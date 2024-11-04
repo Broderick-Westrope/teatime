@@ -18,7 +18,10 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-const serverAddress = ":8080"
+const (
+	serverAddress = ":8080"
+	redisAddress  = "redis:6379"
+)
 
 type application struct {
 	hub  *websocket.Hub
@@ -31,7 +34,7 @@ func newApp() (*application, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to setup database file: %w", err)
 	}
-	repo, err := db.NewRepository(fmt.Sprintf("file:%s", databaseFilePath))
+	repo, err := db.NewRepository(fmt.Sprintf("file:%s", databaseFilePath), redisAddress)
 	if err != nil {
 		return nil, fmt.Errorf("failed to setup database repository: %w", err)
 	}

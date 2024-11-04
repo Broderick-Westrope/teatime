@@ -1,0 +1,22 @@
+services:
+  redis:
+    image: redis:8.0-M02-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  server:
+    build:
+      context: .
+      dockerfile: ./server/Dockerfile
+    ports:
+      - "8080:8080"
+    depends_on:
+      - redis
+#    environment:
+#      - REDIS_ADDRESS=redis:6379
+
+volumes:
+  redis_data:
+
