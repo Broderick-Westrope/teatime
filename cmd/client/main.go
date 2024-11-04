@@ -173,7 +173,7 @@ func createFilepath(path string) (*os.File, error) {
 }
 
 func setupDatabaseFile() (string, error) {
-	path, err := xdg.DataFile("TeaTime/teatime.db")
+	path, err := xdg.DataFile("TeaTime/client.db")
 	if err != nil {
 		return "", err
 	}
