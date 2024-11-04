@@ -6,15 +6,15 @@ I want to create a TUI messaging application using Golang and Bubble Tea. It wil
 
 Start server:
 ```sh
-go run ./cmd/server/...
+go run ./server/main.go
 ```
 
 Start client:
 ```sh
-go run ./cmd/client/main.go 'Robby.Receiver' 'pa$$word'
+go run ./client/main.go 'Robby.Receiver' 'pa$$word'
 ```
 
 Write debug logs to `./logs`:
 ```sh
-DEBUG=t go run ./cmd/client/main.go 'Robby.Receiver' 'pa$$word'
+DEBUG=t go run ./client/main.go 'Robby.Receiver' 'pa$$word'
 ```

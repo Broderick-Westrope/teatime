@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/Broderick-Westrope/teatime/internal/db"
+	"github.com/Broderick-Westrope/teatime/client/internal/db"
+	"github.com/Broderick-Westrope/teatime/client/internal/tui"
+	"github.com/Broderick-Westrope/teatime/client/internal/tui/views"
 	"github.com/Broderick-Westrope/teatime/internal/entity"
-	"github.com/Broderick-Westrope/teatime/internal/tui"
-	"github.com/Broderick-Westrope/teatime/internal/tui/views"
 	"github.com/Broderick-Westrope/teatime/internal/websocket"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/davecgh/go-spew/spew"

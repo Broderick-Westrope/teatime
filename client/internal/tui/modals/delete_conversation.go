@@ -3,8 +3,8 @@ package modals
 import (
 	"fmt"
 
+	"github.com/Broderick-Westrope/teatime/client/internal/tui"
 	"github.com/Broderick-Westrope/teatime/internal/entity"
-	"github.com/Broderick-Westrope/teatime/internal/tui"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/lipgloss"

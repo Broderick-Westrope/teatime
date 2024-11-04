@@ -3,9 +3,9 @@ package components
 import (
 	"fmt"
 
+	"github.com/Broderick-Westrope/teatime/client/internal/tui"
+	"github.com/Broderick-Westrope/teatime/client/internal/tui/modals"
 	"github.com/Broderick-Westrope/teatime/internal/entity"
-	"github.com/Broderick-Westrope/teatime/internal/tui"
-	"github.com/Broderick-Westrope/teatime/internal/tui/modals"
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"

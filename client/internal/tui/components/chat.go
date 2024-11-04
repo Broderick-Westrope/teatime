@@ -4,8 +4,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Broderick-Westrope/teatime/client/internal/tui"
 	"github.com/Broderick-Westrope/teatime/internal/entity"
-	"github.com/Broderick-Westrope/teatime/internal/tui"
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"

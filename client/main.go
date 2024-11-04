@@ -10,9 +10,9 @@ import (
 	"path/filepath"
 	"regexp"
 
-	"github.com/Broderick-Westrope/teatime/internal/db"
-	"github.com/Broderick-Westrope/teatime/internal/tui"
-	"github.com/Broderick-Westrope/teatime/internal/tui/starter"
+	"github.com/Broderick-Westrope/teatime/client/internal/db"
+	"github.com/Broderick-Westrope/teatime/client/internal/tui"
+	"github.com/Broderick-Westrope/teatime/client/internal/tui/starter"
 	"github.com/Broderick-Westrope/teatime/internal/websocket"
 	"github.com/adrg/xdg"
 	tea "github.com/charmbracelet/bubbletea"

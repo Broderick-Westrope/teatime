@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Broderick-Westrope/teatime/client/internal/tui"
+	"github.com/Broderick-Westrope/teatime/client/internal/tui/components"
 	"github.com/Broderick-Westrope/teatime/internal/entity"
-	"github.com/Broderick-Westrope/teatime/internal/tui"
-	"github.com/Broderick-Westrope/teatime/internal/tui/components"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/google/uuid"

@@ -1,7 +1,7 @@
 package views
 
 import (
-	"github.com/Broderick-Westrope/teatime/internal/tui"
+	"github.com/Broderick-Westrope/teatime/client/internal/tui"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/lipgloss"
