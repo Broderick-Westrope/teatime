@@ -29,11 +29,9 @@ func UpdateTypedModel[T tea.Model](model *T, msg tea.Msg) (tea.Cmd, error) {
 // OverlayCenter writes the overlay string onto the background string such that the middle of the
 // overlay string will be at the middle of the overlay will be at the middle of the background.
 func OverlayCenter(bg string, overlay string, ignoreMarginWhitespace bool) (string, error) {
-	row := lipgloss.Height(bg) / 2
-	row -= lipgloss.Height(overlay) / 2
+	row := (lipgloss.Height(bg) - lipgloss.Height(overlay)) / 2
 	row = max(0, row)
-	col := lipgloss.Width(bg) / 2
-	col -= lipgloss.Width(overlay) / 2
+	col := (lipgloss.Width(bg) - lipgloss.Width(overlay)) / 2
 	col = max(0, col)
 	return Overlay(bg, overlay, row, col, ignoreMarginWhitespace)
 }

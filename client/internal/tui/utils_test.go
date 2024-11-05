@@ -31,8 +31,8 @@ Nemo animi nisi blanditiis. Eligendi tempora laudantium assumenda nam.`),
 			want: heredoc.Doc(`
 Facere enim neque consectetur soluta tenetur ducimus omnis. Voluptatibus accusantium maiores quia eaque velit nesciunt hic.
 Amet quidem reprehenderit ex. Error illum sit est expedita sapiente neque. Laborum vero necessitatibus similique suscipit nam.
-Tempore occaecati eligendi accusamus eos similique harum im*********as nam molestiae architecto quam.
-Accusamus pariatur facilis ea nostrum exercitationem quam. *****psam aperiam aspernatur hic fugit officia inventore.
+Tempore occaecati eligendi accusamus eos similique harum i*********uas nam molestiae architecto quam.
+Accusamus pariatur facilis ea nostrum exercitationem quam.*****ipsam aperiam aspernatur hic fugit officia inventore.
 Reiciendis doloribus ut eius id. Repellendus eum enim. Reprehenderit veritatis nulla molestiae nulla veniam.
 Nemo animi nisi blanditiis. Eligendi tempora laudantium assumenda nam.`),
 		},
@@ -48,10 +48,10 @@ Nemo animi nisi blanditiis. Eligendi tempora laudantium assumenda nam.`),
 			ignoreMarginWhitespace: false,
 			want: heredoc.Doc(`
 Facere enim neque consectetur soluta tenetur ducimus omnis. Voluptatibus accusantium maiores quia eaque velit nesciunt hic.
-Amet quidem reprehenderit ex. Error illum sit est expedi               ue. Laborum vero necessitatibus similique suscipit nam.
-Tempore occaecati eligendi accusamus eos similique harum   *********   nam molestiae architecto quam.
-Accusamus pariatur facilis ea nostrum exercitationem qua   *****       eriam aspernatur hic fugit officia inventore.
-Reiciendis doloribus ut eius id. Repellendus eum enim. R               ritatis nulla molestiae nulla veniam.
+Amet quidem reprehenderit ex. Error illum sit est exped               que. Laborum vero necessitatibus similique suscipit nam.
+Tempore occaecati eligendi accusamus eos similique haru   *********    nam molestiae architecto quam.
+Accusamus pariatur facilis ea nostrum exercitationem qu   *****       periam aspernatur hic fugit officia inventore.
+Reiciendis doloribus ut eius id. Repellendus eum enim.                eritatis nulla molestiae nulla veniam.
 Nemo animi nisi blanditiis. Eligendi tempora laudantium assumenda nam.`),
 		},
 		"padded; ignore margins": {
@@ -67,8 +67,8 @@ Nemo animi nisi blanditiis. Eligendi tempora laudantium assumenda nam.`),
 			want: heredoc.Doc(`
 Facere enim neque consectetur soluta tenetur ducimus omnis. Voluptatibus accusantium maiores quia eaque velit nesciunt hic.
 Amet quidem reprehenderit ex. Error illum sit est expedita sapiente neque. Laborum vero necessitatibus similique suscipit nam.
-Tempore occaecati eligendi accusamus eos similique harum im*********as nam molestiae architecto quam.
-Accusamus pariatur facilis ea nostrum exercitationem quam. *****psam aperiam aspernatur hic fugit officia inventore.
+Tempore occaecati eligendi accusamus eos similique harum i*********uas nam molestiae architecto quam.
+Accusamus pariatur facilis ea nostrum exercitationem quam.*****ipsam aperiam aspernatur hic fugit officia inventore.
 Reiciendis doloribus ut eius id. Repellendus eum enim. Reprehenderit veritatis nulla molestiae nulla veniam.
 Nemo animi nisi blanditiis. Eligendi tempora laudantium assumenda nam.`),
 		},
