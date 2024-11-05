@@ -1,19 +1,20 @@
 package modals
 
 import (
-	"fmt"
+	"errors"
 	"strings"
 
-	"github.com/Broderick-Westrope/teatime/client/internal/tui"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/lipgloss"
+
+	"github.com/Broderick-Westrope/teatime/client/internal/tui"
 )
 
 const (
-	formKey_conversationName   = "conversation_name"
-	formKey_participants       = "participants"
-	formKey_notifyParticipants = "notify_participants"
+	formKeyConversationName   = "conversation_name"
+	formKeyParticipants       = "participants"
+	formKeyNotifyParticipants = "notify_participants"
 )
 
 var _ tui.Modal = &CreateConversationModel{}
@@ -27,25 +28,25 @@ func NewCreateConversationModel() *CreateConversationModel {
 	return &CreateConversationModel{
 		form: huh.NewForm(
 			huh.NewGroup(
-				huh.NewInput().Key(formKey_conversationName).
+				huh.NewInput().Key(formKeyConversationName).
 					Title("Conversation Name").
 					CharLimit(100).
 					Validate(func(s string) error {
 						if s == "" {
-							return fmt.Errorf("empty conversation name not allowed")
+							return errors.New("empty conversation name not allowed")
 						}
 						return nil
 					}),
-				huh.NewText().Key(formKey_participants).
+				huh.NewText().Key(formKeyParticipants).
 					Title("Participants").
 					Description("Enter each participants username on a separate line.").
 					Validate(func(s string) error {
 						if s == "" {
-							return fmt.Errorf("at least one participant is required")
+							return errors.New("at least one participant is required")
 						}
 						return nil
 					}),
-				huh.NewConfirm().Key(formKey_notifyParticipants).
+				huh.NewConfirm().Key(formKeyNotifyParticipants).
 					Title("Notify Participants?").
 					Description("This will send a message on your behalf."),
 			),
@@ -81,9 +82,9 @@ func (m *CreateConversationModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m *CreateConversationModel) announceCompletion() tea.Cmd {
 	m.hasAnnouncedCompletion = true
 
-	chatName := m.form.GetString(formKey_conversationName)
-	participants := strings.Split(m.form.GetString(formKey_participants), "\n")
-	notifyParticipants := m.form.GetBool(formKey_notifyParticipants)
+	chatName := m.form.GetString(formKeyConversationName)
+	participants := strings.Split(m.form.GetString(formKeyParticipants), "\n")
+	notifyParticipants := m.form.GetBool(formKeyNotifyParticipants)
 
 	return tea.Batch(
 		tui.CreateConversationCmd(chatName, participants, notifyParticipants),
@@ -98,6 +99,6 @@ func (m *CreateConversationModel) View() string {
 	)
 }
 
-func (m *CreateConversationModel) SetSize(width, height int) {
-	m.form = m.form.WithWidth(width) //.WithHeight(height)
+func (m *CreateConversationModel) SetSize(width, _ int) {
+	m.form = m.form.WithWidth(width)
 }

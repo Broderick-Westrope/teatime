@@ -4,12 +4,13 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Broderick-Westrope/teatime/client/internal/tui"
-	"github.com/Broderick-Westrope/teatime/client/internal/tui/components"
-	"github.com/Broderick-Westrope/teatime/internal/entity"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/google/uuid"
+
+	"github.com/Broderick-Westrope/teatime/client/internal/tui"
+	"github.com/Broderick-Westrope/teatime/client/internal/tui/components"
+	"github.com/Broderick-Westrope/teatime/internal/entity"
 )
 
 // An appFocusRegion is an enum representing a top-level component within the app
@@ -82,70 +83,24 @@ func (m *AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case tui.OpenModalMsg:
-		m.modal = msg.Modal
-		m.modal.SetSize(m.modalWidth, m.modalHeight)
-		err := m.setFocus(appFocusRegionModal)
-		if err != nil {
-			return m, tui.FatalErrorCmd(err)
-		}
-		return m, nil
+		cmd := m.setModal(msg.Modal)
+		return m, cmd
 
 	case tui.CloseModalMsg:
-		m.modal = nil
-		err := m.setFocus(m.prevFocus)
-		if err != nil {
-			return m, tui.FatalErrorCmd(err)
-		}
-		return m, nil
+		cmd := m.setModal(nil)
+		return m, cmd
 
 	case tui.CreateConversationMsg:
-		var cmds []tea.Cmd
-		conversation := entity.Conversation{
-			Metadata: entity.ConversationMetadata{
-				ID:           uuid.New(),
-				Name:         msg.Name,
-				Participants: msg.Participants,
-			},
-			Messages: make([]entity.Message, 0),
-		}
-		cmds = append(cmds, m.conversations.AddNewConversation(conversation))
-		m.chat.SetConversation(conversation)
-
-		if msg.NotifyParticipants {
-			cmd := tui.SendMessageCmd(entity.Message{
-				Content: fmt.Sprintf("%q created this conversation 🎉", m.username),
-				Author:  m.username,
-				SentAt:  time.Now(),
-			}, conversation.Metadata)
-			cmds = append(cmds, cmd)
-		}
-		return m, tea.Batch(cmds...)
+		cmd := m.createConversation(msg.Name, msg.Participants, msg.NotifyParticipants)
+		return m, cmd
 
 	case tui.DeleteConversationMsg:
-		if m.chat.GetConversationID() == msg.ConversationMD.ID {
-			m.chat.SetConversation(entity.Conversation{
-				Metadata: entity.ConversationMetadata{
-					ID:           uuid.New(),
-					Name:         "",
-					Participants: nil,
-				},
-				Messages: nil,
-			})
-		}
-		err := m.conversations.RemoveConversation(msg.ConversationMD)
-		if err != nil {
-			return m, tui.FatalErrorCmd(err)
-		}
+		cmd := m.deleteConversation(msg.ConversationMD)
+		return m, cmd
 
 	case tui.SetConversationMsg:
-		// setFocus needs to be called before SetConversation since
-		// the styling needs to be updated before the viewport is refreshed
-		err := m.setFocus(appFocusRegionChat)
-		if err != nil {
-			return m, tui.FatalErrorCmd(err)
-		}
-		m.chat.SetConversation(entity.Conversation(msg))
-		return m, nil
+		cmd := m.setConversation(entity.Conversation(msg))
+		return m, cmd
 
 	case tui.ReceiveMessageMsg:
 		m.chat.AddNewMessage(msg.Message)
@@ -247,6 +202,79 @@ func (m *AppModel) setSize(windowWidth, windowHeight int) {
 	m.modalHeight = height
 	if m.modal != nil {
 		m.modal.SetSize(m.modalWidth, m.modalHeight)
+	}
+}
+
+func (m *AppModel) createConversation(name string, participants []string, notifyParticipants bool) tea.Cmd {
+	var cmds []tea.Cmd
+	conversation := entity.Conversation{
+		Metadata: entity.ConversationMetadata{
+			ID:           uuid.New(),
+			Name:         name,
+			Participants: participants,
+		},
+		Messages: make([]entity.Message, 0),
+	}
+	cmds = append(cmds, m.conversations.AddNewConversation(conversation))
+	m.chat.SetConversation(conversation)
+
+	if notifyParticipants {
+		cmd := tui.SendMessageCmd(entity.Message{
+			Content: fmt.Sprintf("%q created this conversation 🎉", m.username),
+			Author:  m.username,
+			SentAt:  time.Now(),
+		}, conversation.Metadata)
+		cmds = append(cmds, cmd)
+	}
+	return tea.Batch(cmds...)
+}
+
+func (m *AppModel) deleteConversation(conversationMD entity.ConversationMetadata) tea.Cmd {
+	if m.chat.GetConversationID() == conversationMD.ID {
+		m.chat.SetConversation(entity.Conversation{
+			Metadata: entity.ConversationMetadata{
+				ID:           uuid.New(),
+				Name:         "",
+				Participants: nil,
+			},
+			Messages: nil,
+		})
+	}
+	err := m.conversations.RemoveConversation(conversationMD)
+	if err != nil {
+		return tui.FatalErrorCmd(err)
+	}
+	return nil
+}
+
+func (m *AppModel) setConversation(conversation entity.Conversation) tea.Cmd {
+	// setFocus needs to be called before SetConversation since
+	// the styling needs to be updated before the viewport is refreshed
+	err := m.setFocus(appFocusRegionChat)
+	if err != nil {
+		return tui.FatalErrorCmd(err)
+	}
+	m.chat.SetConversation(conversation)
+	return nil
+}
+
+func (m *AppModel) setModal(modal tui.Modal) tea.Cmd {
+	switch modal == nil {
+	case false:
+		m.modal = modal
+		m.modal.SetSize(m.modalWidth, m.modalHeight)
+		err := m.setFocus(appFocusRegionModal)
+		if err != nil {
+			return tui.FatalErrorCmd(err)
+		}
+		return nil
+	default:
+		m.modal = nil
+		err := m.setFocus(m.prevFocus)
+		if err != nil {
+			return tui.FatalErrorCmd(err)
+		}
+		return nil
 	}
 }
 

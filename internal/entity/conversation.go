@@ -4,8 +4,8 @@ import "github.com/google/uuid"
 
 // Conversation is a list of messages between several participants.
 type Conversation struct {
-	Metadata ConversationMetadata
-	Messages []Message `json:"messages"`
+	Metadata ConversationMetadata `json:"metadata"`
+	Messages []Message            `json:"messages"`
 }
 
 type ConversationMetadata struct {

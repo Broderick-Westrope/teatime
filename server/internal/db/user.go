@@ -46,6 +46,7 @@ func getUser(db *sql.DB, username string) (*User, error) {
 	return &result, nil
 }
 
+//nolint:unused // will be used for changing password
 func updateUser(db *sql.DB, user *User) error {
 	updateSQL := `
 	UPDATE users
@@ -56,6 +57,7 @@ func updateUser(db *sql.DB, user *User) error {
 	return err
 }
 
+//nolint:unused // will be used for deleting account
 func deleteUser(db *sql.DB, username string) error {
 	deleteSQL := `DELETE FROM users WHERE username = $1`
 	_, err := db.Exec(deleteSQL, username)

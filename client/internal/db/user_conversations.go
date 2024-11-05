@@ -11,7 +11,7 @@ type UserConversations struct {
 	Username         string
 	Ciphertext       string // Base64 encoded, encrypted JSON data containing all conversations
 	EncryptionParams string // Encoded string containing parameters for deriving the encryption key from the password
-	
+
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
@@ -58,6 +58,7 @@ func updateUserConversations(db *sql.DB, uc *UserConversations) error {
 	return err
 }
 
+//nolint:unused // Will be used in the future for erasing user data.
 func deleteUserConversations(db *sql.DB, username string) error {
 	deleteSQL := `DELETE FROM user_conversations WHERE username = ?`
 	_, err := db.Exec(deleteSQL, username)

@@ -3,10 +3,11 @@ package components
 import (
 	"fmt"
 
-	"github.com/Broderick-Westrope/teatime/client/internal/tui"
-	"github.com/Broderick-Westrope/teatime/internal/entity"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/Broderick-Westrope/teatime/client/internal/tui"
+	"github.com/Broderick-Westrope/teatime/internal/entity"
 )
 
 var _ tea.Model = &ConversationsModel{}
@@ -44,8 +45,7 @@ func (m *ConversationsModel) Init() tea.Cmd {
 }
 
 func (m *ConversationsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg.(type) {
-	case tea.KeyMsg:
+	if _, ok := msg.(tea.KeyMsg); ok {
 		// all key presses when filtering should go to the nested list component
 		if m.list.FilterState() == list.Filtering {
 			var cmd tea.Cmd
@@ -72,7 +72,7 @@ func (m *ConversationsModel) AddNewMessage(conversationMD entity.ConversationMet
 	for i, item := range items {
 		conversation, ok := item.(Conversation)
 		if !ok {
-			return nil, fmt.Errorf("failed to add new message to conversation: (list item) %v", tui.ErrInvalidTypeAssertion)
+			return nil, fmt.Errorf("failed to add new message to conversation: (list item) %w", tui.ErrInvalidTypeAssertion)
 		}
 
 		if conversation.Metadata.ID != conversationMD.ID {
@@ -113,7 +113,7 @@ func (m *ConversationsModel) RemoveConversation(conversationMD entity.Conversati
 	for i, item := range items {
 		conversation, ok := item.(Conversation)
 		if !ok {
-			return fmt.Errorf("failed to remove conversation: (list item) %v", tui.ErrInvalidTypeAssertion)
+			return fmt.Errorf("failed to remove conversation: (list item) %w", tui.ErrInvalidTypeAssertion)
 		}
 
 		if conversation.Metadata.ID == conversationMD.ID {

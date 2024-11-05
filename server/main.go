@@ -12,11 +12,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Broderick-Westrope/teatime/internal/websocket"
-	"github.com/Broderick-Westrope/teatime/server/internal/db"
-	"github.com/adrg/xdg"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+
+	"github.com/Broderick-Westrope/teatime/internal/websocket"
+	"github.com/Broderick-Westrope/teatime/server/internal/db"
 )
 
 const (
@@ -58,8 +58,13 @@ func main() {
 	r.Get("/ws", app.handleWebSocket(ctx, wg))
 
 	server := &http.Server{
-		Addr:    serverAddress,
-		Handler: app.setupRouter(ctx, wg),
+		Addr:              serverAddress,
+		Handler:           app.setupRouter(ctx, wg),
+		ReadTimeout:       10 * time.Second,
+		ReadHeaderTimeout: 3 * time.Second,
+		WriteTimeout:      10 * time.Second,
+		IdleTimeout:       30 * time.Second,
+		MaxHeaderBytes:    1 << 20, // 1 MB
 	}
 	go app.startServer(server)
 	app.handleShutdown(server, cancelCtx, wg)
@@ -103,27 +108,7 @@ func (app *application) handleShutdown(server *http.Server, cancelCtx context.Ca
 
 	if err := server.Shutdown(shutdownCtx); err != nil {
 		app.log.Error("failed to shutdown HTTP server", slog.Any("error", err))
-		os.Exit(1)
+		return
 	}
 	app.log.Info("graceful shutdown complete")
-}
-
-func setupDatabaseFile() (string, error) {
-	path, err := xdg.DataFile("TeaTime/server.db")
-	if err != nil {
-		return "", err
-	}
-
-	_, err = os.Stat(path)
-	if err != nil {
-		if !errors.Is(err, os.ErrNotExist) {
-			return "", err
-		}
-
-		_, err = os.Create(path)
-		if err != nil {
-			return "", err
-		}
-	}
-	return path, nil
 }

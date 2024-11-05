@@ -5,14 +5,15 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"runtime"
 	"time"
 
-	"github.com/Broderick-Westrope/teatime/internal/secure"
 	"github.com/alexedwards/argon2id"
-
-	_ "github.com/lib/pq"
 	"github.com/redis/go-redis/v9"
+
+	"github.com/Broderick-Westrope/teatime/internal/secure"
+
+	// Postgres database driver.
+	_ "github.com/lib/pq"
 )
 
 type Repository struct {
@@ -32,17 +33,15 @@ func NewRepository(dbConn, redisAddr string) (*Repository, error) {
 
 	return &Repository{
 		db: db,
-		// TODO: revisit these parameters. currently using defaults
 		argonParams: &argon2id.Params{
 			Memory:      64 * 1024,
-			Iterations:  1,
-			Parallelism: uint8(runtime.NumCPU()),
+			Iterations:  3,
+			Parallelism: 1,
 			SaltLength:  16,
 			KeyLength:   32,
 		},
 		redis: redis.NewClient(&redis.Options{
-			Addr:     redisAddr,
-			Password: "", // TODO: should I use a password?
+			Addr: redisAddr,
 		}),
 		redisUserPrefix:    "user:",
 		redisSessionPrefix: "session:",
@@ -64,7 +63,7 @@ func initDB(dbConn string) (*sql.DB, error) {
 		updated_at TIMESTAMP DEFAULT NOW()
 	);
 	`
-	if _, err := db.Exec(createTableSQL); err != nil {
+	if _, err = db.Exec(createTableSQL); err != nil {
 		return nil, fmt.Errorf("create table failed: %w", err)
 	}
 	return db, nil
@@ -110,13 +109,13 @@ func (r *Repository) GetNewSessionID(ctx context.Context, username string) (stri
 		return "", err
 	}
 
-	// TODO: look into using the expiration
-	err = r.redis.Set(ctx, r.redisSessionPrefix+sessionID, username, 0).Err()
+	sessionExpiration := time.Hour * 3
+	err = r.redis.Set(ctx, r.redisSessionPrefix+sessionID, username, sessionExpiration).Err()
 	if err != nil {
 		return "", err
 	}
 
-	err = r.redis.Set(ctx, r.redisUserPrefix+username, sessionID, 0).Err()
+	err = r.redis.Set(ctx, r.redisUserPrefix+username, sessionID, sessionExpiration).Err()
 	if err != nil {
 		return "", err
 	}

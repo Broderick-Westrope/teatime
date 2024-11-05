@@ -1,4 +1,4 @@
-package secure
+package secure_test
 
 import (
 	"crypto/aes"
@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"testing"
 
+	"github.com/Broderick-Westrope/teatime/internal/secure"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -15,10 +16,10 @@ func TestEncryptAESGCM(t *testing.T) {
 	key := []byte("thisisa16bytekey") // 16-byte key for AES-128
 	plaintext := []byte("Test plaintext data for encryption.")
 
-	ciphertext, err := EncryptAESGCM(key, plaintext)
+	ciphertext, err := secure.EncryptAESGCM(key, plaintext)
 	require.NoError(t, err)
 
-	require.Greater(t, len(ciphertext), 0)
+	require.NotEmpty(t, ciphertext)
 
 	block, err := aes.NewCipher(key)
 	require.NoError(t, err)
@@ -46,9 +47,9 @@ func TestDecryptAESGCM(t *testing.T) {
 	ciphertext := aesgcm.Seal(nil, nonce, plaintext, nil)
 
 	// Prepend the nonce to the ciphertext to match the expected input format.
-	ciphertextWithNonce := append(nonce, ciphertext...)
+	nonce = append(nonce, ciphertext...)
 
-	decryptedPlaintext, err := DecryptAESGCM(key, ciphertextWithNonce)
+	decryptedPlaintext, err := secure.DecryptAESGCM(key, nonce)
 	require.NoError(t, err)
 
 	assert.EqualValues(t, decryptedPlaintext, plaintext)
@@ -62,11 +63,11 @@ func TestEncryptDecryptAESGCM(t *testing.T) {
 
 	plaintext := []byte("This is a test message.")
 
-	ciphertext, err := EncryptAESGCM(key, plaintext)
+	ciphertext, err := secure.EncryptAESGCM(key, plaintext)
 	require.NoError(t, err)
 
 	// Decrypt the ciphertext.
-	decryptedText, err := DecryptAESGCM(key, ciphertext)
+	decryptedText, err := secure.DecryptAESGCM(key, ciphertext)
 	require.NoError(t, err)
 
 	assert.EqualValues(t, plaintext, decryptedText)
@@ -84,10 +85,10 @@ func TestDecryptAESGCMWithWrongKey(t *testing.T) {
 
 	plaintext := []byte("This is a test message.")
 
-	ciphertext, err := EncryptAESGCM(correctKey, plaintext)
+	ciphertext, err := secure.EncryptAESGCM(correctKey, plaintext)
 	require.NoError(t, err)
 
-	_, err = DecryptAESGCM(wrongKey, ciphertext)
+	_, err = secure.DecryptAESGCM(wrongKey, ciphertext)
 	assert.Error(t, err)
 }
 
@@ -99,12 +100,12 @@ func TestDecryptAESGCMWithCorruptedCiphertext(t *testing.T) {
 
 	plaintext := []byte("This is a test message.")
 
-	ciphertext, err := EncryptAESGCM(key, plaintext)
+	ciphertext, err := secure.EncryptAESGCM(key, plaintext)
 	require.NoError(t, err)
 
 	ciphertext[len(ciphertext)-1] ^= 0xFF
 
-	_, err = DecryptAESGCM(key, ciphertext)
+	_, err = secure.DecryptAESGCM(key, ciphertext)
 	assert.Error(t, err)
 }
 
@@ -116,7 +117,7 @@ func TestEncryptAESGCMWithInvalidKey(t *testing.T) {
 
 	plaintext := []byte("This is a test message.")
 
-	_, err = EncryptAESGCM(key, plaintext)
+	_, err = secure.EncryptAESGCM(key, plaintext)
 	assert.Error(t, err)
 }
 
@@ -128,6 +129,6 @@ func TestDecryptAESGCMWithShortCiphertext(t *testing.T) {
 
 	ciphertext := make([]byte, 5)
 
-	_, err = DecryptAESGCM(key, ciphertext)
+	_, err = secure.DecryptAESGCM(key, ciphertext)
 	assert.Error(t, err)
 }

@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-const cookieName_sessionID = "session_id"
+const cookieNameSessionID = "session_id"
 
 func (app *application) addNewSessionID(ctx context.Context, w http.ResponseWriter, username string) error {
 	sessionID, err := app.repo.GetNewSessionID(ctx, username)
@@ -16,7 +16,7 @@ func (app *application) addNewSessionID(ctx context.Context, w http.ResponseWrit
 	}
 
 	http.SetCookie(w, &http.Cookie{
-		Name:    cookieName_sessionID,
+		Name:    cookieNameSessionID,
 		Value:   sessionID,
 		Expires: time.Now().Add(24 * time.Hour),
 	})
@@ -25,13 +25,13 @@ func (app *application) addNewSessionID(ctx context.Context, w http.ResponseWrit
 
 func (app *application) deleteSessionID(w http.ResponseWriter) {
 	http.SetCookie(w, &http.Cookie{
-		Name:   cookieName_sessionID,
+		Name:   cookieNameSessionID,
 		Value:  "",
 		MaxAge: -1,
 	})
 }
 
-func (app *application) writeInternalServerError(w http.ResponseWriter, msg string, err error) {
-	app.log.Error(msg, slog.Any("error", err))
+func (app *application) writeInternalServerError(ctx context.Context, w http.ResponseWriter, msg string, err error) {
+	app.log.ErrorContext(ctx, msg, slog.Any("error", err))
 	http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 }

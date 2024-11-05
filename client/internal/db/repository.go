@@ -9,9 +9,11 @@ import (
 	"runtime"
 	"time"
 
+	// SQLite database driver.
+	_ "github.com/mattn/go-sqlite3"
+
 	"github.com/Broderick-Westrope/teatime/internal/entity"
 	"github.com/Broderick-Westrope/teatime/internal/secure"
-	_ "github.com/mattn/go-sqlite3"
 )
 
 type Repository struct {
@@ -54,7 +56,7 @@ func initDB(dbConn string) (*sql.DB, error) {
 		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 	);
 	`
-	if _, err := db.Exec(createTableSQL); err != nil {
+	if _, err = db.Exec(createTableSQL); err != nil {
 		return nil, fmt.Errorf("create table failed: %w", err)
 	}
 	return db, nil
@@ -82,7 +84,6 @@ func (r *Repository) GetConversations(username, password string) ([]entity.Conve
 	plaintextBytes, err := secure.DecryptAESGCM(key, decodedCiphertext)
 	if err != nil {
 		if errors.Is(err, secure.ErrFailedToDecrypt) {
-			// TODO: return a specific error when this failed because of the incorrect key
 			return nil, fmt.Errorf("failed to decrypt ciphertext: %w", err)
 		}
 		return nil, fmt.Errorf("failed to decrypt ciphertext: %w", err)
@@ -127,8 +128,6 @@ func (r *Repository) UpdateConversations(creds *entity.Credentials, conversation
 }
 
 func (r *Repository) setupNewUser(username, password string) ([]entity.Conversation, error) {
-	// TODO: once user registration & authn is added this data setup should be done there.
-
 	key, hash, err := secure.CreateKey(password, r.argonParams, r.keyLength)
 	if err != nil {
 		return nil, err

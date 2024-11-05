@@ -3,12 +3,13 @@ package components
 import (
 	"fmt"
 
-	"github.com/Broderick-Westrope/teatime/client/internal/tui"
-	"github.com/Broderick-Westrope/teatime/client/internal/tui/modals"
-	"github.com/Broderick-Westrope/teatime/internal/entity"
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/Broderick-Westrope/teatime/client/internal/tui"
+	"github.com/Broderick-Westrope/teatime/client/internal/tui/modals"
+	"github.com/Broderick-Westrope/teatime/internal/entity"
 )
 
 type Conversation entity.Conversation
@@ -16,7 +17,7 @@ type Conversation entity.Conversation
 func (c Conversation) Title() string       { return c.Metadata.Name }
 func (c Conversation) FilterValue() string { return c.Metadata.Name }
 func (c Conversation) Description() string {
-	if len(c.Messages) <= 0 {
+	if len(c.Messages) == 0 {
 		return ""
 	}
 	return c.Messages[len(c.Messages)-1].Content
@@ -33,10 +34,8 @@ func NewListDelegate(keys *ListDelegateKeyMap, styles list.DefaultItemStyles) li
 
 	d.UpdateFunc = func(msg tea.Msg, m *list.Model) tea.Cmd {
 		// Operations that do not require a selected conversation
-		switch msg := msg.(type) {
-		case tea.KeyMsg:
-			switch {
-			case key.Matches(msg, keys.new):
+		if msg, ok := msg.(tea.KeyMsg); ok {
+			if key.Matches(msg, keys.new) {
 				return tui.OpenModalCmd(modals.NewCreateConversationModel())
 			}
 		}
@@ -54,19 +53,16 @@ func NewListDelegate(keys *ListDelegateKeyMap, styles list.DefaultItemStyles) li
 			))
 		}
 
-		switch msg := msg.(type) {
-		case tea.KeyMsg:
+		var keyMsg tea.KeyMsg
+		if keyMsg, ok = msg.(tea.KeyMsg); ok {
 			switch {
-			case key.Matches(msg, keys.submit):
+			case key.Matches(keyMsg, keys.submit):
 				return tui.SetConversationCmd(entity.Conversation(conversation))
 
-			case key.Matches(msg, keys.delete):
-				// TODO: use a cmd to open a confirmation modal before deleting this conversation
+			case key.Matches(keyMsg, keys.delete):
 				if m.FilterState() == list.FilterApplied {
 					return nil
 				}
-
-				//m.RemoveItem(m.Index())
 				return tui.OpenModalCmd(modals.NewDeleteConversationModel(conversation.Metadata))
 			}
 		}

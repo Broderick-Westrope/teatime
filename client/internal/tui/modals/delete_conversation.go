@@ -3,16 +3,17 @@ package modals
 import (
 	"fmt"
 
-	"github.com/Broderick-Westrope/teatime/client/internal/tui"
-	"github.com/Broderick-Westrope/teatime/internal/entity"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
+
+	"github.com/Broderick-Westrope/teatime/client/internal/tui"
+	"github.com/Broderick-Westrope/teatime/internal/entity"
 )
 
 const (
-	formKey_confirmDelete = "confirmDelete"
+	formKeyConfirmDelete = "confirmDelete"
 )
 
 var _ tui.Modal = &DeleteConversationModel{}
@@ -27,7 +28,7 @@ func NewDeleteConversationModel(conversationMD entity.ConversationMetadata) *Del
 	return &DeleteConversationModel{
 		form: huh.NewForm(
 			huh.NewGroup(
-				huh.NewConfirm().Key(formKey_confirmDelete),
+				huh.NewConfirm().Key(formKeyConfirmDelete),
 			),
 		),
 		conversationMD: conversationMD,
@@ -63,7 +64,7 @@ func (m *DeleteConversationModel) announceCompletion() tea.Cmd {
 	m.hasAnnouncedCompletion = true
 	cmds := []tea.Cmd{tui.CloseModalCmd}
 
-	if m.form.GetBool(formKey_confirmDelete) {
+	if m.form.GetBool(formKeyConfirmDelete) {
 		cmds = append(cmds, tui.DeleteConversationCmd(m.conversationMD))
 	}
 
@@ -77,6 +78,6 @@ func (m *DeleteConversationModel) View() string {
 	)
 }
 
-func (m *DeleteConversationModel) SetSize(width, height int) {
-	m.form = m.form.WithWidth(width) //.WithHeight(height)
+func (m *DeleteConversationModel) SetSize(width, _ int) {
+	m.form = m.form.WithWidth(width)
 }

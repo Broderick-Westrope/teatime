@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"regexp"
@@ -23,7 +24,7 @@ func UpdateTypedModel[T tea.Model](model *T, msg tea.Msg) (tea.Cmd, error) {
 	return cmd, nil
 }
 
-// Window Overlay (CREDIT: https://gist.github.com/ras0q/9bf5d81544b22302393f61206892e2cd) ----------------------------------------
+// Window Overlay (CREDIT: https://gist.github.com/ras0q/9bf5d81544b22302393f61206892e2cd) ------------------------------------
 
 // OverlayCenter writes the overlay string onto the background string such that the middle of the
 // overlay string will be at the middle of the overlay will be at the middle of the background.
@@ -67,7 +68,7 @@ func Overlay(bg, overlay string, row, col int, ignoreMarginWhitespace bool) (str
 		bgLeft := ansi.Truncate(bgLine, col, "")
 		bgRight, err := truncateLeft(bgLine, col+ansi.StringWidth(overlayLine))
 		if err != nil {
-
+			return "", err
 		}
 
 		bgLines[targetRow] = bgLeft + overlayLine + bgRight
@@ -78,6 +79,8 @@ func Overlay(bg, overlay string, row, col int, ignoreMarginWhitespace bool) (str
 
 // removeMarginWhitespace preserves the background where the overlay line has leading or trailing whitespace.
 // This is done by detecting those empty cells in the overlay string and replacing them with the corresponding background cells.
+//
+//nolint:gocognit
 func removeMarginWhitespace(bgLine, overlayLine string, col int) string {
 	var result strings.Builder
 
@@ -154,7 +157,7 @@ func removeMarginWhitespace(bgLine, overlayLine string, col int) string {
 
 		if unicode.IsSpace(r) && (isLeadingWhitespace || isTrailingWhitespace) {
 			// Preserve background character
-			for k := 0; k < runeWidth; k++ {
+			for k := range runeWidth {
 				bgChar := getBgCharAt(bgLine, col+visualPos+k)
 				result.WriteString(bgChar)
 			}
@@ -222,7 +225,7 @@ func getBgCharAt(bgLine string, visualIndex int) string {
 // truncateLeft removes characters from the beginning of a line, considering ANSI escape codes.
 func truncateLeft(line string, padding int) (string, error) {
 	if strings.Contains(line, "\n") {
-		return "", fmt.Errorf("line must not contain newline")
+		return "", errors.New("line must not contain newline")
 	}
 
 	wrapped := strings.Split(ansi.Hardwrap(line, padding, true), "\n")

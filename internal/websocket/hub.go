@@ -20,7 +20,7 @@ func NewHub() *Hub {
 		clients: make(map[string]*websocket.Conn),
 		mu:      &sync.RWMutex{},
 		upgrader: &websocket.Upgrader{
-			CheckOrigin: func(r *http.Request) bool { return true },
+			CheckOrigin: func(_ *http.Request) bool { return true },
 		},
 	}
 }

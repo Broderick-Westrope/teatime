@@ -4,13 +4,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Broderick-Westrope/teatime/client/internal/tui"
-	"github.com/Broderick-Westrope/teatime/internal/entity"
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/google/uuid"
+
+	"github.com/Broderick-Westrope/teatime/client/internal/tui"
+	"github.com/Broderick-Westrope/teatime/internal/entity"
 )
 
 var _ tea.Model = &ChatModel{}
@@ -27,7 +28,8 @@ type ChatModel struct {
 
 // NewChatModel creates a new ChatModel.
 //   - messages: list of all messages to display ordered from oldest (first) to newest (last).
-//   - username: the username that the active user signed up with. This is used to identify which messages they have sent.
+//   - username: the username that the active user signed up with.
+//     This is used to identify which messages they have sent.
 //   - chatName: the title to display in the chat header.
 //   - enabled: whether this component is enabled to begin with.
 func NewChatModel(conversation entity.Conversation, username string, enabled bool) *ChatModel {
@@ -53,7 +55,6 @@ func (m *ChatModel) Init() tea.Cmd {
 	m.switchStyleFunc(m.styleFunc)
 
 	m.vp = viewport.New(0, 0)
-	// TODO: derive this position
 	m.vp.YPosition = lipgloss.Height(m.viewHeader())
 	m.refreshViewportContent()
 
@@ -64,10 +65,8 @@ func (m *ChatModel) Init() tea.Cmd {
 }
 
 func (m *ChatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		switch msg.String() {
-		case "enter":
+	if msg, ok := msg.(tea.KeyMsg); ok {
+		if msg.String() == "enter" {
 			value := m.input.Value()
 			if len(strings.TrimSpace(value)) == 0 {
 				return m, nil
@@ -115,7 +114,9 @@ func (m *ChatModel) SetSize(width, height int) {
 	m.input.Width = width - (lipgloss.Width(m.input.Prompt) + lipgloss.Width(m.input.Cursor.View()))
 
 	// TODO: derive this margin
-	const verticalMargin = 6
+	verticalMargin := lipgloss.Height(m.viewHeader()) +
+		m.styles.Header.GetVerticalFrameSize() +
+		m.styles.Conversation.GetVerticalFrameSize()
 	m.vp.Width = width
 	m.vp.Height = height - verticalMargin
 	m.refreshViewportContent()

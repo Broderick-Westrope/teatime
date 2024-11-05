@@ -1,12 +1,13 @@
 package views
 
 import (
-	"fmt"
+	"errors"
 
-	"github.com/Broderick-Westrope/teatime/client/internal/tui"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/lipgloss"
+
+	"github.com/Broderick-Westrope/teatime/client/internal/tui"
 )
 
 const (
@@ -34,9 +35,9 @@ const (
 \             y'
  '-.._____..-'
   -Felix Lee-`
-	formKey_authMode = "authMode"
-	formKey_username = "username"
-	formKey_password = "password"
+	formKeyAuthMode = "authMode"
+	formKeyUsername = "username"
+	formKeyPassword = "password"
 )
 
 var _ tea.Model = &LockModel{}
@@ -55,22 +56,22 @@ func NewLockModel(errMessage string) *LockModel {
 	return &LockModel{
 		form: huh.NewForm(
 			huh.NewGroup(
-				huh.NewConfirm().Key(formKey_authMode).
+				huh.NewConfirm().Key(formKeyAuthMode).
 					Affirmative("Signup").Negative("Login"),
-				huh.NewInput().Key(formKey_username).
+				huh.NewInput().Key(formKeyUsername).
 					Title("Username:").CharLimit(100).
 					Validate(func(s string) error {
 						if s == "" {
-							return fmt.Errorf("empty username not allowed")
+							return errors.New("empty username not allowed")
 						}
 						return nil
 					}),
-				huh.NewInput().Key(formKey_password).
+				huh.NewInput().Key(formKeyPassword).
 					Title("Password:").CharLimit(100).
 					EchoMode(huh.EchoModePassword).
 					Validate(func(s string) error {
 						if s == "" {
-							return fmt.Errorf("empty password not allowed")
+							return errors.New("empty password not allowed")
 						}
 						return nil
 					}),
@@ -86,11 +87,11 @@ func (m *LockModel) Init() tea.Cmd {
 }
 
 func (m *LockModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tea.WindowSizeMsg:
+	if msg, ok := msg.(tea.WindowSizeMsg); ok {
 		m.width = msg.Width
 		m.height = msg.Height
-		formWidth := msg.Width - (lipgloss.Width(logoStr) + m.styles.Logo.GetHorizontalFrameSize() + m.styles.Form.GetHorizontalFrameSize())
+		formWidth := msg.Width - (lipgloss.Width(logoStr) +
+			m.styles.Logo.GetHorizontalFrameSize() + m.styles.Form.GetHorizontalFrameSize())
 		formWidth = min(formWidth, 50)
 		m.form = m.form.WithWidth(formWidth)
 		return m, nil
@@ -116,9 +117,9 @@ func (m *LockModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *LockModel) announceCompletion() tea.Cmd {
-	isSignup := m.form.GetBool(formKey_authMode)
-	username := m.form.GetString(formKey_username)
-	password := m.form.GetString(formKey_password)
+	isSignup := m.form.GetBool(formKeyAuthMode)
+	username := m.form.GetString(formKeyUsername)
+	password := m.form.GetString(formKeyPassword)
 
 	m.hasAnnouncedCompletion = true
 	return tui.AuthenticateCmd(isSignup, username, password)

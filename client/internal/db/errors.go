@@ -1,7 +1,7 @@
 package db
 
-import "fmt"
+import "errors"
 
 var (
-	ErrNotFound = fmt.Errorf("not found")
+	ErrNotFound = errors.New("not found")
 )

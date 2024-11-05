@@ -1,10 +1,10 @@
 package secure
 
 import (
+	crand "crypto/rand"
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"math/rand"
 	"strings"
 
 	"golang.org/x/crypto/argon2"
@@ -39,33 +39,33 @@ type ArgonParams struct {
 	SaltLength uint32
 }
 
-func DeriveKey(password, encodedParams string, keyLength uint32) (key []byte, err error) {
-	params, salt, err := decodeArgonParams(encodedParams)
+func DeriveKey(password, encodedParams string, keyLength uint32) ([]byte, error) {
+	params, salt, err := DecodeArgonParams(encodedParams)
 	if err != nil {
 		return nil, err
 	}
 
-	key = argon2.IDKey([]byte(password), salt,
+	key := argon2.IDKey([]byte(password), salt,
 		params.Iterations, params.Memory, params.Parallelism, keyLength)
 	return key, nil
 }
 
-func CreateKey(password string, params *ArgonParams, keyLength uint32) (key []byte, encodedParams string, err error) {
+func CreateKey(password string, params *ArgonParams, keyLength uint32) ([]byte, string, error) {
 	salt, err := generateRandomBytes(params.SaltLength)
 	if err != nil {
 		return nil, "", err
 	}
 	b64Salt := base64.RawStdEncoding.EncodeToString(salt)
 
-	key = argon2.IDKey([]byte(password), salt, params.Iterations, params.Memory, params.Parallelism, keyLength)
+	key := argon2.IDKey([]byte(password), salt, params.Iterations, params.Memory, params.Parallelism, keyLength)
 
-	encodedParams = fmt.Sprintf("$argon2id$v=%d$m=%d,t=%d,p=%d$%s",
+	encodedParams := fmt.Sprintf("$argon2id$v=%d$m=%d,t=%d,p=%d$%s",
 		argon2.Version, params.Memory, params.Iterations, params.Parallelism, b64Salt)
 
 	return key, encodedParams, nil
 }
 
-func decodeArgonParams(hash string) (params *ArgonParams, salt []byte, err error) {
+func DecodeArgonParams(hash string) (*ArgonParams, []byte, error) {
 	vals := strings.Split(hash, "$")
 	if len(vals) != 5 {
 		return nil, nil, ErrInvalidHash
@@ -76,7 +76,7 @@ func decodeArgonParams(hash string) (params *ArgonParams, salt []byte, err error
 	}
 
 	var version int
-	_, err = fmt.Sscanf(vals[2], "v=%d", &version)
+	_, err := fmt.Sscanf(vals[2], "v=%d", &version)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -84,13 +84,13 @@ func decodeArgonParams(hash string) (params *ArgonParams, salt []byte, err error
 		return nil, nil, ErrIncompatibleVersion
 	}
 
-	params = &ArgonParams{}
+	params := &ArgonParams{}
 	_, err = fmt.Sscanf(vals[3], "m=%d,t=%d,p=%d", &params.Memory, &params.Iterations, &params.Parallelism)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	salt, err = base64.RawStdEncoding.Strict().DecodeString(vals[4])
+	salt, err := base64.RawStdEncoding.Strict().DecodeString(vals[4])
 	if err != nil {
 		return nil, nil, err
 	}
@@ -101,7 +101,7 @@ func decodeArgonParams(hash string) (params *ArgonParams, salt []byte, err error
 
 func generateRandomBytes(n uint32) ([]byte, error) {
 	b := make([]byte, n)
-	_, err := rand.Read(b)
+	_, err := crand.Read(b)
 	if err != nil {
 		return nil, err
 	}

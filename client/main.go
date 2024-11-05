@@ -38,9 +38,13 @@ func newApp(logWriter io.Writer) *application {
 }
 
 func main() {
+	os.Exit(run())
+}
+
+func run() int {
 	logFile, err := createFilepath(fmt.Sprintf("logs/client_logs-%s.log", sanitizePathString(time.Now().String())))
 	if err != nil {
-		panic(fmt.Sprintf("failed to create log file: %v", err))
+		return 1
 	}
 	defer logFile.Close()
 
@@ -49,8 +53,9 @@ func main() {
 	err = app.runTui()
 	if err != nil {
 		app.log.Error("failed to run tui", slog.Any("error", err))
-		os.Exit(1)
+		return 1
 	}
+	return 0
 }
 
 func (app *application) runTui() error {
@@ -116,13 +121,13 @@ func createFilepath(path string) (*os.File, error) {
 		dir := filepath.Dir(path)
 		err = os.MkdirAll(dir, 0700)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create directory '%s': %w\n", dir, err)
+			return nil, fmt.Errorf("failed to create directory '%s': %w", dir, err)
 		}
 	}
 
 	file, err := os.Create(path)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create file '%s': %w\n", path, err)
+		return nil, fmt.Errorf("failed to create file '%s': %w", path, err)
 	}
 	return file, nil
 }

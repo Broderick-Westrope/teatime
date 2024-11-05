@@ -1,4 +1,4 @@
-package tui
+package tui_test
 
 import (
 	"testing"
@@ -7,6 +7,8 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Broderick-Westrope/teatime/client/internal/tui"
 )
 
 func TestOverlayCenter(t *testing.T) {
@@ -18,69 +20,63 @@ func TestOverlayCenter(t *testing.T) {
 	}{
 		"simple": {
 			bg: heredoc.Doc(`
-				Facere enim neque consectetur soluta tenetur ducimus omnis. Voluptatibus accusantium maiores quia eaque velit nesciunt hic saepe tenetur.
-				Amet quidem reprehenderit ex. Error illum sit est expedita sapiente neque. Laborum vero necessitatibus similique suscipit nam.
-				Tempore occaecati eligendi accusamus eos similique harum impedit. Quas nam molestiae architecto quam.
-				Accusamus pariatur facilis ea nostrum exercitationem quam. Sit ipsam aperiam aspernatur hic fugit officia inventore.
-				Reiciendis doloribus ut eius id. Repellendus eum enim. Reprehenderit veritatis nulla molestiae nulla veniam.
-				Nemo animi nisi blanditiis. Eligendi tempora laudantium assumenda nam.
-			`),
+Facere enim neque consectetur soluta tenetur ducimus omnis. Voluptatibus accusantium maiores quia eaque velit nesciunt hic.
+Amet quidem reprehenderit ex. Error illum sit est expedita sapiente neque. Laborum vero necessitatibus similique suscipit nam.
+Tempore occaecati eligendi accusamus eos similique harum impedit. Quas nam molestiae architecto quam.
+Accusamus pariatur facilis ea nostrum exercitationem quam. Sit ipsam aperiam aspernatur hic fugit officia inventore.
+Reiciendis doloribus ut eius id. Repellendus eum enim. Reprehenderit veritatis nulla molestiae nulla veniam.
+Nemo animi nisi blanditiis. Eligendi tempora laudantium assumenda nam.`),
 			overlay:                "*********\n*****",
 			ignoreMarginWhitespace: false,
 			want: heredoc.Doc(`
-				Facere enim neque consectetur soluta tenetur ducimus omnis. Voluptatibus accusantium maiores quia eaque velit nesciunt hic saepe tenetur.
-				Amet quidem reprehenderit ex. Error illum sit est expedita sapiente neque. Laborum vero necessitatibus similique suscipit nam.
-				Tempore occaecati eligendi accusamus eos similique harum impedit*********m molestiae architecto quam.
-				Accusamus pariatur facilis ea nostrum exercitationem quam. Sit i*****aperiam aspernatur hic fugit officia inventore.
-				Reiciendis doloribus ut eius id. Repellendus eum enim. Reprehenderit veritatis nulla molestiae nulla veniam.
-				Nemo animi nisi blanditiis. Eligendi tempora laudantium assumenda nam.
-			`),
+Facere enim neque consectetur soluta tenetur ducimus omnis. Voluptatibus accusantium maiores quia eaque velit nesciunt hic.
+Amet quidem reprehenderit ex. Error illum sit est expedita sapiente neque. Laborum vero necessitatibus similique suscipit nam.
+Tempore occaecati eligendi accusamus eos similique harum impedit*********m molestiae architecto quam.
+Accusamus pariatur facilis ea nostrum exercitationem quam. Sit i*****aperiam aspernatur hic fugit officia inventore.
+Reiciendis doloribus ut eius id. Repellendus eum enim. Reprehenderit veritatis nulla molestiae nulla veniam.
+Nemo animi nisi blanditiis. Eligendi tempora laudantium assumenda nam.`),
 		},
 		"padded; enforce margins": {
 			bg: heredoc.Doc(`
-				Facere enim neque consectetur soluta tenetur ducimus omnis. Voluptatibus accusantium maiores quia eaque velit nesciunt hic saepe tenetur.
-				Amet quidem reprehenderit ex. Error illum sit est expedita sapiente neque. Laborum vero necessitatibus similique suscipit nam.
-				Tempore occaecati eligendi accusamus eos similique harum impedit. Quas nam molestiae architecto quam.
-				Accusamus pariatur facilis ea nostrum exercitationem quam. Sit ipsam aperiam aspernatur hic fugit officia inventore.
-				Reiciendis doloribus ut eius id. Repellendus eum enim. Reprehenderit veritatis nulla molestiae nulla veniam.
-				Nemo animi nisi blanditiis. Eligendi tempora laudantium assumenda nam.
-			`),
+Facere enim neque consectetur soluta tenetur ducimus omnis. Voluptatibus accusantium maiores quia eaque velit nesciunt hic.
+Amet quidem reprehenderit ex. Error illum sit est expedita sapiente neque. Laborum vero necessitatibus similique suscipit nam.
+Tempore occaecati eligendi accusamus eos similique harum impedit. Quas nam molestiae architecto quam.
+Accusamus pariatur facilis ea nostrum exercitationem quam. Sit ipsam aperiam aspernatur hic fugit officia inventore.
+Reiciendis doloribus ut eius id. Repellendus eum enim. Reprehenderit veritatis nulla molestiae nulla veniam.
+Nemo animi nisi blanditiis. Eligendi tempora laudantium assumenda nam.`),
 			overlay:                lipgloss.NewStyle().Padding(1, 3).Render("*********\n*****"),
 			ignoreMarginWhitespace: false,
 			want: heredoc.Doc(`
-				Facere enim neque consectetur soluta tenetur ducimus omnis. Voluptatibus accusantium maiores quia eaque velit nesciunt hic saepe tenetur.
-				Amet quidem reprehenderit ex. Error illum sit est expedita sa               aborum vero necessitatibus similique suscipit nam.
-				Tempore occaecati eligendi accusamus eos similique harum impe   *********   olestiae architecto quam.
-				Accusamus pariatur facilis ea nostrum exercitationem quam. Si   *****        aspernatur hic fugit officia inventore.
-				Reiciendis doloribus ut eius id. Repellendus eum enim. Repreh               is nulla molestiae nulla veniam.
-				Nemo animi nisi blanditiis. Eligendi tempora laudantium assumenda nam.
-			`),
+Facere enim neque consectetur soluta tenetur ducimus omnis. Voluptatibus accusantium maiores quia eaque velit nesciunt hic.
+Amet quidem reprehenderit ex. Error illum sit est expedita sa               aborum vero necessitatibus similique suscipit nam.
+Tempore occaecati eligendi accusamus eos similique harum impe   *********   olestiae architecto quam.
+Accusamus pariatur facilis ea nostrum exercitationem quam. Si   *****        aspernatur hic fugit officia inventore.
+Reiciendis doloribus ut eius id. Repellendus eum enim. Repreh               is nulla molestiae nulla veniam.
+Nemo animi nisi blanditiis. Eligendi tempora laudantium assumenda nam.`),
 		},
 		"padded; ignore margins": {
 			bg: heredoc.Doc(`
-				Facere enim neque consectetur soluta tenetur ducimus omnis. Voluptatibus accusantium maiores quia eaque velit nesciunt hic saepe tenetur.
-				Amet quidem reprehenderit ex. Error illum sit est expedita sapiente neque. Laborum vero necessitatibus similique suscipit nam.
-				Tempore occaecati eligendi accusamus eos similique harum impedit. Quas nam molestiae architecto quam.
-				Accusamus pariatur facilis ea nostrum exercitationem quam. Sit ipsam aperiam aspernatur hic fugit officia inventore.
-				Reiciendis doloribus ut eius id. Repellendus eum enim. Reprehenderit veritatis nulla molestiae nulla veniam.
-				Nemo animi nisi blanditiis. Eligendi tempora laudantium assumenda nam.
-			`),
+Facere enim neque consectetur soluta tenetur ducimus omnis. Voluptatibus accusantium maiores quia eaque velit nesciunt hic.
+Amet quidem reprehenderit ex. Error illum sit est expedita sapiente neque. Laborum vero necessitatibus similique suscipit nam.
+Tempore occaecati eligendi accusamus eos similique harum impedit. Quas nam molestiae architecto quam.
+Accusamus pariatur facilis ea nostrum exercitationem quam. Sit ipsam aperiam aspernatur hic fugit officia inventore.
+Reiciendis doloribus ut eius id. Repellendus eum enim. Reprehenderit veritatis nulla molestiae nulla veniam.
+Nemo animi nisi blanditiis. Eligendi tempora laudantium assumenda nam.`),
 			overlay:                lipgloss.NewStyle().Padding(1, 3).Render("*********\n*****"),
 			ignoreMarginWhitespace: true,
 			want: heredoc.Doc(`
-				Facere enim neque consectetur soluta tenetur ducimus omnis. Voluptatibus accusantium maiores quia eaque velit nesciunt hic saepe tenetur.
-				Amet quidem reprehenderit ex. Error illum sit est expedita sapiente neque. Laborum vero necessitatibus similique suscipit nam.
-				Tempore occaecati eligendi accusamus eos similique harum impedit*********m molestiae architecto quam.
-				Accusamus pariatur facilis ea nostrum exercitationem quam. Sit i*****aperiam aspernatur hic fugit officia inventore.
-				Reiciendis doloribus ut eius id. Repellendus eum enim. Reprehenderit veritatis nulla molestiae nulla veniam.
-				Nemo animi nisi blanditiis. Eligendi tempora laudantium assumenda nam.
-			`),
+Facere enim neque consectetur soluta tenetur ducimus omnis. Voluptatibus accusantium maiores quia eaque velit nesciunt hic.
+Amet quidem reprehenderit ex. Error illum sit est expedita sapiente neque. Laborum vero necessitatibus similique suscipit nam.
+Tempore occaecati eligendi accusamus eos similique harum impedit*********m molestiae architecto quam.
+Accusamus pariatur facilis ea nostrum exercitationem quam. Sit i*****aperiam aspernatur hic fugit officia inventore.
+Reiciendis doloribus ut eius id. Repellendus eum enim. Reprehenderit veritatis nulla molestiae nulla veniam.
+Nemo animi nisi blanditiis. Eligendi tempora laudantium assumenda nam.`),
 		},
 	}
 
 	for name, tc := range tt {
 		t.Run(name, func(t *testing.T) {
-			result, err := OverlayCenter(tc.bg, tc.overlay, tc.ignoreMarginWhitespace)
+			result, err := tui.OverlayCenter(tc.bg, tc.overlay, tc.ignoreMarginWhitespace)
 			require.NoError(t, err)
 			assert.Equal(t, tc.want, result)
 		})
@@ -180,7 +176,7 @@ func TestOverlay(t *testing.T) {
 
 	for name, tc := range tt {
 		t.Run(name, func(t *testing.T) {
-			result, err := Overlay(tc.bg, tc.overlay, tc.row, tc.col, tc.ignoreMarginWhitespace)
+			result, err := tui.Overlay(tc.bg, tc.overlay, tc.row, tc.col, tc.ignoreMarginWhitespace)
 			require.NoError(t, err)
 			assert.Equal(t, tc.want, result)
 		})

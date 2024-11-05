@@ -7,7 +7,12 @@ import (
 	"net/http"
 )
 
-// AuthMiddleware protects endpoints that require authentication
+type ctxKey int
+
+const (
+	ctxKeyUsername ctxKey = iota
+)
+
 func (app *application) authMiddleware() func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -31,7 +36,7 @@ func (app *application) authMiddleware() func(http.Handler) http.Handler {
 				return
 			}
 
-			ctx := context.WithValue(r.Context(), "username", username)
+			ctx := context.WithValue(r.Context(), ctxKeyUsername, username)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}

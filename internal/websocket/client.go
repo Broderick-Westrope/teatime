@@ -1,16 +1,18 @@
 package websocket
 
 import (
+	crand "crypto/rand"
 	"encoding/json"
 	"fmt"
-	"math/rand"
+	"math/big"
 	"net/http"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/Broderick-Westrope/teatime/internal/entity"
 	"github.com/gorilla/websocket"
+
+	"github.com/Broderick-Westrope/teatime/internal/entity"
 )
 
 // Client is a struct that represents the websocket client.
@@ -47,16 +49,16 @@ func (c *Client) connect() error {
 	}
 	header.Add("Cookie", cookie.String())
 
-	conn, _, err := websocket.DefaultDialer.Dial(c.uri, header)
+	conn, resp, err := websocket.DefaultDialer.Dial(c.uri, header)
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 
 	c.conn = conn
 	return nil
 }
 
-// TODO: make use of this
 func (c *Client) Reconnect() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -66,7 +68,11 @@ func (c *Client) Reconnect() error {
 	maxDelay := 10 * time.Second
 
 	for attempt := 1; attempt <= 3; attempt++ {
-		c.conn, _, err = websocket.DefaultDialer.Dial(c.uri, nil)
+		var resp *http.Response
+		c.conn, resp, err = websocket.DefaultDialer.Dial(c.uri, nil)
+		if resp != nil {
+			resp.Body.Close()
+		}
 		if err == nil {
 			return nil
 		}
@@ -76,7 +82,13 @@ func (c *Client) Reconnect() error {
 		if delay > maxDelay {
 			delay = maxDelay
 		}
-		delay = time.Duration(rand.Int63n(int64(delay)))
+
+		var nBig *big.Int
+		nBig, err = crand.Int(crand.Reader, big.NewInt(int64(delay)))
+		if err != nil {
+			return fmt.Errorf("failed to generate random int: %w", err)
+		}
+		delay = time.Duration(nBig.Int64())
 
 		time.Sleep(delay)
 	}

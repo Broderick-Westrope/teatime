@@ -10,13 +10,14 @@ import (
 	"net/http"
 	"net/url"
 
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/davecgh/go-spew/spew"
+
 	"github.com/Broderick-Westrope/teatime/client/internal/db"
 	"github.com/Broderick-Westrope/teatime/client/internal/tui"
 	"github.com/Broderick-Westrope/teatime/client/internal/tui/views"
 	"github.com/Broderick-Westrope/teatime/internal/entity"
 	"github.com/Broderick-Westrope/teatime/internal/websocket"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/davecgh/go-spew/spew"
 )
 
 var _ tea.Model = &Model{}
@@ -62,7 +63,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tui.AuthenticateMsg:
-		sessionID, err := m.authenticate(msg.IsSignup, msg.Credentials)
+		sessionID, err := m.authenticate(context.Background(), msg.IsSignup, msg.Credentials)
 		if err != nil {
 			if errors.Is(err, errUnauthorised) {
 				cmd := m.setChildToLock("Authentication failed, please try again.")
@@ -96,8 +97,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.sendMessage(msg.Message, msg.ConversationMD)
 
 	case tea.KeyMsg:
-		switch msg.String() {
-		case "ctrl+c":
+		if msg.String() == "ctrl+c" {
 			_ = m.appExitCleanup()
 			return m, tea.Quit
 		}
@@ -105,7 +105,6 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
-		break
 	}
 
 	var cmd tea.Cmd
@@ -138,13 +137,13 @@ func (m *Model) sendMessage(msg entity.Message, conversationMD entity.Conversati
 
 	err := m.wsClient.SendChatMessage(msg, conversationMD, recipients)
 	if err != nil {
-		return tui.FatalErrorCmd(fmt.Errorf("failed to send chat message: %v\n", err))
+		return tui.FatalErrorCmd(fmt.Errorf("failed to send chat message: %w", err))
 	}
 
 	return cmd
 }
 
-func (m *Model) authenticate(isSignup bool, creds *entity.Credentials) (string, error) {
+func (m *Model) authenticate(ctx context.Context, isSignup bool, creds *entity.Credentials) (string, error) {
 	route := "/auth/login"
 	if isSignup {
 		route = "/auth/signup"
@@ -159,7 +158,7 @@ func (m *Model) authenticate(isSignup bool, creds *entity.Credentials) (string, 
 		return "", fmt.Errorf("failed to marshal body: %w", err)
 	}
 
-	req, err := http.NewRequest("GET", route, bytes.NewBuffer(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, route, bytes.NewBuffer(body))
 	if err != nil {
 		return "", fmt.Errorf("failed to build request to %q: %w", route, err)
 	}
@@ -169,6 +168,7 @@ func (m *Model) authenticate(isSignup bool, creds *entity.Credentials) (string, 
 	if err != nil {
 		return "", fmt.Errorf("failed to do request to %q: %w", route, err)
 	}
+	defer resp.Body.Close()
 
 	switch resp.StatusCode {
 	case http.StatusOK:
@@ -186,7 +186,7 @@ func (m *Model) authenticate(isSignup bool, creds *entity.Credentials) (string, 
 			return c.Value, nil
 		}
 	}
-	return "", fmt.Errorf("failed to find session ID cookie in response")
+	return "", errors.New("failed to find session ID cookie in response")
 }
 
 func (m *Model) setChildToLock(errMessage string) tea.Cmd {

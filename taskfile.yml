@@ -1,10 +1,26 @@
-version: '3'
+version: 3
 
 tasks:
+  default:
+    deps:
+      - test
+      - lint
+
+  test:
+    desc: Run all tests, collecting coverage and checking for race conditions.
+    cmds:
+      - go test -cover -race ./...
+
+  lint:
+    cmds:
+      - golangci-lint run ./...
+
   dc:up:
+    desc: Start the server and it's dependencies using docker-compose
     cmds:
       - docker-compose up -d --build --remove-orphans
 
   dc:down:
+    desc: Stop the docker-compose containers.
     cmds:
       - docker-compose down

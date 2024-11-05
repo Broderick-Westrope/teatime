@@ -52,9 +52,6 @@ type chatStyles struct {
 	InputPlaceholder lipgloss.Style
 	InputCompletion  lipgloss.Style
 	InputCursor      lipgloss.Style
-
-	leftBubbleBorder  lipgloss.Border
-	rightBubbleBorder lipgloss.Border
 }
 
 type chatStyleFunc func(width, height int) *chatStyles
@@ -72,7 +69,8 @@ func enabledChatStyleFunc(width, height int) *chatStyles {
 		Height: height,
 
 		// TODO: Add cleaner truncation for the header content. Truncation should not affect the line break effect.
-		Header:       lipgloss.NewStyle().MaxWidth(width-10).MaxHeight(2).BorderStyle(lipgloss.NormalBorder()).BorderBottom(true).Padding(0, 4),
+		Header: lipgloss.NewStyle().MaxWidth(width-10).MaxHeight(2).
+			BorderStyle(lipgloss.NormalBorder()).BorderBottom(true).Padding(0, 4),
 		Conversation: lipgloss.NewStyle().Height(height - (6)), // accounting for the header and input heights
 		Timestamp:    fullWidth.AlignHorizontal(lipgloss.Center),
 
