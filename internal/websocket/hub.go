@@ -51,7 +51,7 @@ func (h *Hub) Send(message []byte, usernames []string) error {
 	for _, username := range usernames {
 		conn, exists := h.clients[username]
 		if !exists {
-			// TODO: handle user offline
+			// No queuing mechanism is used; if the recipient is offline they will not receive the message.
 			continue
 		}
 

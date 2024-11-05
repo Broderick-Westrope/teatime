@@ -68,7 +68,7 @@ func enabledChatStyleFunc(width, height int) *chatStyles {
 		Width:  width,
 		Height: height,
 
-		// TODO: Add cleaner truncation for the header content. Truncation should not affect the line break effect.
+		// this width is a hard limit, but truncation should be used better manage the header width
 		Header: lipgloss.NewStyle().MaxWidth(width-10).MaxHeight(2).
 			BorderStyle(lipgloss.NormalBorder()).BorderBottom(true).Padding(0, 4),
 		Conversation: lipgloss.NewStyle().Height(height - (6)), // accounting for the header and input heights

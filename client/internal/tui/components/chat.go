@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/google/uuid"
 
 	"github.com/Broderick-Westrope/teatime/client/internal/tui"
@@ -24,6 +25,7 @@ type ChatModel struct {
 
 	styles    *chatStyles
 	styleFunc func(width, height int) *chatStyles
+	width     int
 }
 
 // NewChatModel creates a new ChatModel.
@@ -113,13 +115,13 @@ func (m *ChatModel) SetSize(width, height int) {
 	m.styles = m.styleFunc(width, height)
 	m.input.Width = width - (lipgloss.Width(m.input.Prompt) + lipgloss.Width(m.input.Cursor.View()))
 
-	// TODO: derive this margin
 	verticalMargin := lipgloss.Height(m.viewHeader()) +
 		m.styles.Header.GetVerticalFrameSize() +
 		m.styles.Conversation.GetVerticalFrameSize()
 	m.vp.Width = width
 	m.vp.Height = height - verticalMargin
 	m.refreshViewportContent()
+	m.width = width
 }
 
 // Enable makes the model appear as though it is active/focussed.
@@ -170,7 +172,7 @@ func (m *ChatModel) View() string {
 
 // viewHeader returns the styled output for the header.
 func (m *ChatModel) viewHeader() string {
-	return m.styles.Header.Render(m.conversation.Metadata.Name) + "\n"
+	return m.styles.Header.Render(ansi.Truncate(m.conversation.Metadata.Name, m.width/2, "…")) + "\n"
 }
 
 // viewConversation returns the styled output for the messages.
