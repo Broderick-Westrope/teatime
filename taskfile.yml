@@ -2,9 +2,9 @@ version: 3
 
 tasks:
   default:
-    deps:
-      - test
-      - lint
+    cmds:
+      - task: test
+      - task: lint
 
   test:
     desc: Run all tests, collecting coverage and checking for race conditions.
