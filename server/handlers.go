@@ -104,7 +104,11 @@ func (app *application) handleWebSocket(ctx context.Context, wg *sync.WaitGroup)
 		wg.Add(1)
 		defer wg.Done()
 
-		username := r.Header.Get("username")
+		username, ok := r.Context().Value("username").(string)
+		if !ok {
+			app.writeInternalServerError(w, "failed to get username from request context", nil)
+			return
+		}
 		usernameAttr := slog.String("username", username)
 
 		conn, err := app.hub.Upgrade(w, r, nil)

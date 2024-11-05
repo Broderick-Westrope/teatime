@@ -9,9 +9,8 @@ type FatalErrorMsg error
 
 // AuthenticateMsg encloses the details for attempting authentication.
 type AuthenticateMsg struct {
-	IsSignup bool
-	Username string
-	Password string
+	IsSignup    bool
+	Credentials *entity.Credentials
 }
 
 // CreateConversationMsg encloses the details for creating a new conversation.

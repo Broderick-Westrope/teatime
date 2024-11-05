@@ -16,11 +16,13 @@ import (
 	"github.com/Broderick-Westrope/teatime/server/internal/db"
 	"github.com/adrg/xdg"
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 )
 
 const (
 	serverAddress = ":8080"
 	redisAddress  = "redis:6379"
+	postgresConn  = "postgres://user:password@postgres:5432/server?sslmode=disable"
 )
 
 type application struct {
@@ -30,11 +32,7 @@ type application struct {
 }
 
 func newApp() (*application, error) {
-	databaseFilePath, err := setupDatabaseFile()
-	if err != nil {
-		return nil, fmt.Errorf("failed to setup database file: %w", err)
-	}
-	repo, err := db.NewRepository(fmt.Sprintf("file:%s", databaseFilePath), redisAddress)
+	repo, err := db.NewRepository(postgresConn, redisAddress)
 	if err != nil {
 		return nil, fmt.Errorf("failed to setup database repository: %w", err)
 	}
@@ -69,6 +67,7 @@ func main() {
 
 func (app *application) setupRouter(ctx context.Context, wg *sync.WaitGroup) chi.Router {
 	r := chi.NewRouter()
+	r.With(middleware.Logger)
 
 	r.Route("/auth", func(r chi.Router) {
 		r.Get("/signup", app.handleSignup())

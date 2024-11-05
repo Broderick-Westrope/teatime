@@ -17,8 +17,10 @@ func AuthenticateCmd(isSignup bool, username, password string) tea.Cmd {
 	return func() tea.Msg {
 		return AuthenticateMsg{
 			IsSignup: isSignup,
-			Username: username,
-			Password: password,
+			Credentials: &entity.Credentials{
+				Username: username,
+				Password: password,
+			},
 		}
 	}
 }

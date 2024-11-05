@@ -4,14 +4,13 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"log/slog"
 	"os"
 	"path/filepath"
 	"regexp"
+	"time"
 
 	"github.com/Broderick-Westrope/teatime/client/internal/db"
-	"github.com/Broderick-Westrope/teatime/client/internal/tui"
 	"github.com/Broderick-Westrope/teatime/client/internal/tui/starter"
 	"github.com/Broderick-Westrope/teatime/internal/websocket"
 	"github.com/adrg/xdg"
@@ -19,48 +18,33 @@ import (
 )
 
 type application struct {
-	username string
-	password string
+	serverAddr string
 
-	log      *slog.Logger
-	wsClient *websocket.Client
-	isDebug  bool
-	msgCh    chan tea.Msg
+	log     *slog.Logger
+	isDebug bool
+	msgCh   chan tea.Msg
 }
 
-func newApp(username, password string, logWriter io.Writer) *application {
-	wsClient, err := websocket.NewClient("ws://localhost:8080/ws", username)
-	if err != nil {
-		log.Fatalf("failed to create WebSocket client: %v\n", err)
-	}
-
+func newApp(logWriter io.Writer) *application {
 	_, isDebug := os.LookupEnv("DEBUG")
 
 	return &application{
-		username: username,
-		password: password,
+		serverAddr: "http://localhost:8080/",
 
-		log:      slog.New(slog.NewTextHandler(logWriter, nil)),
-		wsClient: wsClient,
-		isDebug:  isDebug,
-		msgCh:    make(chan tea.Msg),
+		log:     slog.New(slog.NewTextHandler(logWriter, nil)),
+		isDebug: isDebug,
+		msgCh:   make(chan tea.Msg),
 	}
 }
 
 func main() {
-	username := os.Args[1]
-	password := os.Args[2]
-
-	logFile, err := createFilepath(fmt.Sprintf("logs/client_%s.log", sanitizePathString(username)))
+	logFile, err := createFilepath(fmt.Sprintf("logs/client_logs-%s.log", sanitizePathString(time.Now().String())))
 	if err != nil {
 		panic(fmt.Sprintf("failed to create log file: %v", err))
 	}
 	defer logFile.Close()
 
-	app := newApp(username, password, logFile)
-	defer app.wsClient.Close()
-
-	go app.readFromWebSocket()
+	app := newApp(logFile)
 
 	err = app.runTui()
 	if err != nil {
@@ -70,10 +54,12 @@ func main() {
 }
 
 func (app *application) runTui() error {
+	defer close(app.msgCh)
+
 	var messagesDump *os.File
 	var err error
 	if app.isDebug {
-		messagesDump, err = createFilepath(fmt.Sprintf("logs/client-messages_%s.log", sanitizePathString(app.username)))
+		messagesDump, err = createFilepath("logs/client-messages.log")
 		if err != nil {
 			return fmt.Errorf("failed to setup messages dump file: %w", err)
 		}
@@ -89,7 +75,7 @@ func (app *application) runTui() error {
 		return fmt.Errorf("failed to setup database repository: %w", err)
 	}
 
-	m, err := starter.NewModel(app.username, app.password, app.wsClient, repo, messagesDump)
+	m, err := starter.NewModel(app.msgCh, app.serverAddr, repo, messagesDump)
 	if err != nil {
 		return fmt.Errorf("failed to create starter model: %w", err)
 	}
@@ -118,37 +104,6 @@ func (app *application) runTui() error {
 		app.log.Info("server disconnected gracefully", slog.Any("error", err))
 	}
 	return nil
-}
-
-func (app *application) readFromWebSocket() {
-	defer close(app.msgCh)
-
-	for {
-		msg, err := app.wsClient.ReadMessage()
-		if err != nil {
-			app.log.Error("failed to read message", slog.Any("error", err))
-			app.msgCh <- tui.FatalErrorMsg(err)
-			return
-		}
-
-		switch payload := msg.Payload.(type) {
-		case websocket.PayloadSendChatMessage:
-			if payload.ConversationMD.Name == app.username {
-				payload.ConversationMD.Name = payload.Message.Author
-			}
-			app.msgCh <- tui.ReceiveMessageMsg{
-				ConversationMD: payload.ConversationMD,
-				Message:        payload.Message,
-			}
-		default:
-			app.log.Error("unknown WebSocket message payload", slog.Int("msg_type", int(msg.Type)))
-			app.msgCh <- tui.FatalErrorMsg(fmt.Errorf("unknown WebSocket message payload"))
-			return
-		}
-
-		// TODO: This can be removed after debugging
-		app.log.Info("received message", slog.Any("value", msg))
-	}
 }
 
 func createFilepath(path string) (*os.File, error) {
@@ -192,7 +147,7 @@ func setupDatabaseFile() (string, error) {
 	return path, nil
 }
 
-func sanitizePathString(username string) string {
+func sanitizePathString(s string) string {
 	invalidChars := regexp.MustCompile(`[<>:"/\\|?* ]`)
-	return invalidChars.ReplaceAllString(username, "-")
+	return invalidChars.ReplaceAllString(s, "-")
 }

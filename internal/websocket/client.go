@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/rand"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -14,19 +15,21 @@ import (
 
 // Client is a struct that represents the websocket client.
 type Client struct {
-	conn     *websocket.Conn
-	mu       *sync.RWMutex
-	uri      string
-	username string
+	conn      *websocket.Conn
+	mu        *sync.RWMutex
+	uri       string
+	sessionID string
 }
 
 // NewClient is a function used to create a new websocket client.
-func NewClient(uri, username string) (*Client, error) {
+func NewClient(uri, sessionID string) (*Client, error) {
+	uri = strings.Replace(uri, "http", "ws", 1)
+
 	c := &Client{
-		conn:     nil,
-		mu:       &sync.RWMutex{},
-		uri:      uri,
-		username: username,
+		conn:      nil,
+		mu:        &sync.RWMutex{},
+		uri:       uri,
+		sessionID: sessionID,
 	}
 	err := c.connect()
 	return c, err
@@ -38,7 +41,11 @@ func (c *Client) connect() error {
 	defer c.mu.Unlock()
 
 	header := http.Header{}
-	header.Add("username", c.username)
+	cookie := &http.Cookie{
+		Name:  "session_id",
+		Value: c.sessionID,
+	}
+	header.Add("Cookie", cookie.String())
 
 	conn, _, err := websocket.DefaultDialer.Dial(c.uri, header)
 	if err != nil {
@@ -78,6 +85,9 @@ func (c *Client) Reconnect() error {
 
 // Close will gracefully close the WebSocket connection.
 func (c *Client) Close() error {
+	if c.conn == nil {
+		return nil
+	}
 	return closeConnection(c.conn)
 }
 

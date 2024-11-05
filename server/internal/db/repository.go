@@ -10,7 +10,8 @@ import (
 
 	"github.com/Broderick-Westrope/teatime/internal/secure"
 	"github.com/alexedwards/argon2id"
-	_ "github.com/mattn/go-sqlite3"
+
+	_ "github.com/lib/pq"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -23,8 +24,8 @@ type Repository struct {
 	redisSessionPrefix string
 }
 
-func NewRepository(dbDSN, redisAddr string) (*Repository, error) {
-	db, err := initDB(dbDSN)
+func NewRepository(dbConn, redisAddr string) (*Repository, error) {
+	db, err := initDB(dbConn)
 	if err != nil {
 		return nil, err
 	}
@@ -48,8 +49,8 @@ func NewRepository(dbDSN, redisAddr string) (*Repository, error) {
 	}, nil
 }
 
-func initDB(dataSourceName string) (*sql.DB, error) {
-	db, err := sql.Open("sqlite3", dataSourceName)
+func initDB(dbConn string) (*sql.DB, error) {
+	db, err := sql.Open("postgres", dbConn)
 	if err != nil {
 		return nil, err
 	}
@@ -59,8 +60,8 @@ func initDB(dataSourceName string) (*sql.DB, error) {
 	CREATE TABLE IF NOT EXISTS users (
 		username TEXT PRIMARY KEY,
 		password_hash TEXT NOT NULL,
-		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		created_at TIMESTAMP DEFAULT NOW(),
+		updated_at TIMESTAMP DEFAULT NOW()
 	);
 	`
 	if _, err := db.Exec(createTableSQL); err != nil {

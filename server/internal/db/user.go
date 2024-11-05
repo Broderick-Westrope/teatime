@@ -18,7 +18,7 @@ type User struct {
 func insertUser(db *sql.DB, user *User) error {
 	query := `
 	INSERT INTO users (username, password_hash, created_at, updated_at)
-	VALUES (?, ?, ?, ?)
+	VALUES ($1, $2, $3, $4)
 	ON CONFLICT(username) DO UPDATE SET
 		password_hash=excluded.password_hash,
 		updated_at=excluded.updated_at;
@@ -31,7 +31,7 @@ func getUser(db *sql.DB, username string) (*User, error) {
 	query := `
 	SELECT username, password_hash, created_at, updated_at
 	FROM users
-	WHERE username = ?
+	WHERE username = $1
 	`
 	row := db.QueryRow(query, username)
 
@@ -49,15 +49,15 @@ func getUser(db *sql.DB, username string) (*User, error) {
 func updateUser(db *sql.DB, user *User) error {
 	updateSQL := `
 	UPDATE users
-	SET password_hash = ?, updated_at = ?
-	WHERE username = ?
+	SET password_hash = $1, updated_at = $2
+	WHERE username = $3
 	`
 	_, err := db.Exec(updateSQL, user.PasswordHash, user.UpdatedAt, user.Username)
 	return err
 }
 
 func deleteUser(db *sql.DB, username string) error {
-	deleteSQL := `DELETE FROM users WHERE username = ?`
+	deleteSQL := `DELETE FROM users WHERE username = $1`
 	_, err := db.Exec(deleteSQL, username)
 	return err
 }

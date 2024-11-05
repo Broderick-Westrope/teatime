@@ -1,6 +1,7 @@
 package modals
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/Broderick-Westrope/teatime/client/internal/tui"
@@ -28,12 +29,25 @@ func NewCreateConversationModel() *CreateConversationModel {
 			huh.NewGroup(
 				huh.NewInput().Key(formKey_conversationName).
 					Title("Conversation Name").
-					CharLimit(100),
+					CharLimit(100).
+					Validate(func(s string) error {
+						if s == "" {
+							return fmt.Errorf("empty conversation name not allowed")
+						}
+						return nil
+					}),
 				huh.NewText().Key(formKey_participants).
 					Title("Participants").
-					Description("Enter each participants username on a separate line."),
+					Description("Enter each participants username on a separate line.").
+					Validate(func(s string) error {
+						if s == "" {
+							return fmt.Errorf("at least one participant is required")
+						}
+						return nil
+					}),
 				huh.NewConfirm().Key(formKey_notifyParticipants).
-					Title("Notify Participants?"),
+					Title("Notify Participants?").
+					Description("This will send a message on your behalf."),
 			),
 		),
 	}
@@ -70,19 +84,6 @@ func (m *CreateConversationModel) announceCompletion() tea.Cmd {
 	chatName := m.form.GetString(formKey_conversationName)
 	participants := strings.Split(m.form.GetString(formKey_participants), "\n")
 	notifyParticipants := m.form.GetBool(formKey_notifyParticipants)
-
-	switch {
-	case len(participants) <= 0:
-		return tui.CloseModalCmd
-
-	case chatName == "":
-		switch {
-		case len(participants) == 1:
-			chatName = participants[0]
-		default:
-			return tui.CloseModalCmd
-		}
-	}
 
 	return tea.Batch(
 		tui.CreateConversationCmd(chatName, participants, notifyParticipants),

@@ -20,8 +20,8 @@ type Repository struct {
 	keyLength   uint32
 }
 
-func NewRepository(dataSourceName string) (*Repository, error) {
-	db, err := initDB(dataSourceName)
+func NewRepository(dbConn string) (*Repository, error) {
+	db, err := initDB(dbConn)
 	if err != nil {
 		return nil, err
 	}
@@ -38,8 +38,8 @@ func NewRepository(dataSourceName string) (*Repository, error) {
 	}, nil
 }
 
-func initDB(dataSourceName string) (*sql.DB, error) {
-	db, err := sql.Open("sqlite3", dataSourceName)
+func initDB(dbConn string) (*sql.DB, error) {
+	db, err := sql.Open("sqlite3", dbConn)
 	if err != nil {
 		return nil, err
 	}
@@ -97,13 +97,13 @@ func (r *Repository) GetConversations(username, password string) ([]entity.Conve
 	return conversations, nil
 }
 
-func (r *Repository) UpdateConversations(username, password string, conversations []entity.Conversation) error {
-	uc, err := getUserConversations(r.db, username)
+func (r *Repository) UpdateConversations(creds *entity.Credentials, conversations []entity.Conversation) error {
+	uc, err := getUserConversations(r.db, creds.Username)
 	if err != nil {
 		return err
 	}
 
-	key, err := secure.DeriveKey(password, uc.EncryptionParams, r.keyLength)
+	key, err := secure.DeriveKey(creds.Password, uc.EncryptionParams, r.keyLength)
 	if err != nil {
 		return fmt.Errorf("failed to derive encryption key: %w", err)
 	}
