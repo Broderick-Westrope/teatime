@@ -8,57 +8,34 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"sync"
 	"syscall"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/joho/godotenv"
 
 	"github.com/Broderick-Westrope/teatime/internal/websocket"
 	"github.com/Broderick-Westrope/teatime/server/internal/db"
 )
 
-const (
-	serverAddress = ":8080"
-	redisAddress  = "redis:6379"
-	postgresConn  = "postgres://user:password@postgres:5432/server?sslmode=disable"
-)
-
-type application struct {
-	hub  *websocket.Hub
-	log  *slog.Logger
-	repo *db.Repository
-}
-
-func newApp() (*application, error) {
-	repo, err := db.NewRepository(postgresConn, redisAddress)
-	if err != nil {
-		return nil, fmt.Errorf("failed to setup database repository: %w", err)
-	}
-
-	return &application{
-		hub:  websocket.NewHub(),
-		log:  slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug})),
-		repo: repo,
-	}, nil
-}
-
 func main() {
-	ctx, cancelCtx := context.WithCancel(context.Background())
-	wg := &sync.WaitGroup{}
-	r := chi.NewRouter()
+	os.Exit(run())
+}
 
+func run() int {
 	app, err := newApp()
 	if err != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "failed to create application: %s", err)
-		os.Exit(1)
+		return 1
 	}
 
-	r.Get("/ws", app.handleWebSocket(ctx, wg))
-
+	ctx, cancelCtx := context.WithCancel(context.Background())
+	wg := &sync.WaitGroup{}
 	server := &http.Server{
-		Addr:              serverAddress,
+		Addr:              app.serverAddr,
 		Handler:           app.setupRouter(ctx, wg),
 		ReadTimeout:       10 * time.Second,
 		ReadHeaderTimeout: 3 * time.Second,
@@ -66,13 +43,74 @@ func main() {
 		IdleTimeout:       30 * time.Second,
 		MaxHeaderBytes:    1 << 20, // 1 MB
 	}
+
 	go app.startServer(server)
 	app.handleShutdown(server, cancelCtx, wg)
+	return 0
+}
+
+type application struct {
+	hub  *websocket.Hub
+	log  *slog.Logger
+	repo *db.Repository
+
+	serverAddr string
+	redisAddr  string
+	dbConn     string
+	logLevel   slog.Level
+}
+
+func newApp() (*application, error) {
+	app := &application{
+		hub: websocket.NewHub(),
+	}
+	err := app.loadEnvVars()
+	if err != nil {
+		return nil, err
+	}
+
+	app.repo, err = db.NewRepository(app.dbConn, app.redisAddr)
+	if err != nil {
+		return nil, fmt.Errorf("failed to setup database repository: %w", err)
+	}
+	app.log = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: app.logLevel}))
+
+	return app, nil
+}
+
+func (app *application) loadEnvVars() error {
+	err := godotenv.Load(".server.env")
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("failed to load .server.env file: %w", err)
+	}
+
+	var found bool
+	if app.serverAddr, found = os.LookupEnv("SERVER_ADDR"); !found {
+		return fmt.Errorf("SERVER_ADDR env variable is required")
+	}
+	if app.redisAddr, found = os.LookupEnv("REDIS_ADDR"); !found {
+		return fmt.Errorf("REDIS_ADDR env variable is required")
+	}
+	if app.dbConn, found = os.LookupEnv("DB_CONN"); !found {
+		return fmt.Errorf("DB_CONN env variable is required")
+	}
+	logLevel := os.Getenv("LOG_LEVEL")
+	switch logLevel {
+	case "":
+		app.logLevel = slog.LevelInfo
+	default:
+		var intLevel int
+		intLevel, err = strconv.Atoi(logLevel)
+		if err != nil {
+			return fmt.Errorf("LOG_LEVEL env variable must be an integer")
+		}
+		app.logLevel = slog.Level(intLevel)
+	}
+	return nil
 }
 
 func (app *application) setupRouter(ctx context.Context, wg *sync.WaitGroup) chi.Router {
-	r := chi.NewRouter()
-	r.With(middleware.Logger)
+	r := chi.NewRouter().With(app.loggerMiddleware(), middleware.Recoverer)
 
 	r.Route("/auth", func(r chi.Router) {
 		r.Get("/signup", app.handleSignup())

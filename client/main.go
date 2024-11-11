@@ -3,52 +3,31 @@ package main
 import (
 	"errors"
 	"fmt"
-	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
 	"regexp"
-	"time"
+
+	"github.com/adrg/xdg"
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/joho/godotenv"
 
 	"github.com/Broderick-Westrope/teatime/client/internal/db"
 	"github.com/Broderick-Westrope/teatime/client/internal/tui/starter"
 	"github.com/Broderick-Westrope/teatime/internal/websocket"
-	"github.com/adrg/xdg"
-	tea "github.com/charmbracelet/bubbletea"
 )
-
-type application struct {
-	serverAddr string
-
-	log     *slog.Logger
-	isDebug bool
-	msgCh   chan tea.Msg
-}
-
-func newApp(logWriter io.Writer) *application {
-	_, isDebug := os.LookupEnv("DEBUG")
-
-	return &application{
-		serverAddr: "http://localhost:8080/",
-
-		log:     slog.New(slog.NewTextHandler(logWriter, nil)),
-		isDebug: isDebug,
-		msgCh:   make(chan tea.Msg),
-	}
-}
 
 func main() {
 	os.Exit(run())
 }
 
 func run() int {
-	logFile, err := createFilepath(fmt.Sprintf("logs/client_logs-%s.log", sanitizePathString(time.Now().String())))
+	app, err := newApp()
 	if err != nil {
+		_, _ = fmt.Fprintf(os.Stderr, "failed to create application: %v\n", err)
 		return 1
 	}
-	defer logFile.Close()
-
-	app := newApp(logFile)
+	defer app.cleanupFunc()
 
 	err = app.runTui()
 	if err != nil {
@@ -58,13 +37,63 @@ func run() int {
 	return 0
 }
 
+type application struct {
+	serverAddr string
+
+	log         *slog.Logger
+	debugID     string
+	msgCh       chan tea.Msg
+	cleanupFunc func()
+}
+
+func newApp() (*application, error) {
+	app := &application{
+		msgCh: make(chan tea.Msg),
+	}
+
+	err := app.loadEnvVars()
+	if err != nil {
+		return nil, err
+	}
+
+	var logFile *os.File
+	if app.debugID != "" {
+		logFile, err = createFilepath(fmt.Sprintf("logs/client_logs-%s.log", sanitizePathString(app.debugID)))
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	app.log = slog.New(slog.NewTextHandler(logFile, nil))
+	app.cleanupFunc = func() {
+		if logFile != nil {
+			logFile.Close()
+		}
+	}
+	return app, err
+}
+
+func (app *application) loadEnvVars() error {
+	err := godotenv.Load(".client.env")
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("failed to load .client.env file: %w", err)
+	}
+	app.debugID = os.Getenv("DEBUG")
+
+	var found bool
+	if app.serverAddr, found = os.LookupEnv("SERVER_ADDR"); !found {
+		return fmt.Errorf("SERVER_ADDR env variable is required")
+	}
+	return nil
+}
+
 func (app *application) runTui() error {
 	defer close(app.msgCh)
 
 	var messagesDump *os.File
 	var err error
-	if app.isDebug {
-		messagesDump, err = createFilepath("logs/client-messages.log")
+	if app.debugID != "" {
+		messagesDump, err = createFilepath(fmt.Sprintf("logs/client_messages-%s.log", app.debugID))
 		if err != nil {
 			return fmt.Errorf("failed to setup messages dump file: %w", err)
 		}

@@ -24,8 +24,11 @@ services:
     depends_on:
       - redis
       - postgres
-#    environment:
-#      - REDIS_ADDRESS=redis:6379
+    environment:
+      - SERVER_ADDR=:8080
+      - REDIS_ADDR=redis:6379
+      - DB_CONN=postgres://user:password@postgres:5432/server?sslmode=disable
+      - LOG_LEVEL=-4
 
 
 volumes:

@@ -16,6 +16,10 @@ import (
 	"github.com/Broderick-Westrope/teatime/internal/secure"
 )
 
+var (
+	ErrNotFound = errors.New("not found")
+)
+
 type Repository struct {
 	db          *sql.DB
 	argonParams *secure.ArgonParams
