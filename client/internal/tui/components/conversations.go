@@ -161,6 +161,20 @@ func (m *ConversationsModel) switchStyles(styles *conversationsStyles) {
 	m.list.SetDelegate(NewListDelegate(DefaultListDelegateKeyMap(), styles.ListItem))
 }
 
+func (m *ConversationsModel) UpdateConnectionStatus(username string, connected bool) error {
+	for _, item := range m.list.Items() {
+		conversation, ok := item.(Conversation)
+		if !ok {
+			return tui.ErrInvalidTypeAssertion
+		}
+		for _, p := range conversation.Metadata.Participants {
+			if p == username {
+				
+			}
+		}
+	}
+}
+
 func (m *ConversationsModel) View() string {
 	return m.list.View()
 }

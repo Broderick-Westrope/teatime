@@ -16,6 +16,7 @@ type MsgType int
 
 const (
 	MsgTypeSendChatMessage MsgType = iota
+	MsgTypeNotifyConnection
 )
 
 type MsgPayload interface {
@@ -29,6 +30,13 @@ type PayloadSendChatMessage struct {
 }
 
 func (PayloadSendChatMessage) isWebSocketMsgPayload() {}
+
+type PayloadNotifyConnection struct {
+	Username  string
+	Connected bool
+}
+
+func (PayloadNotifyConnection) isWebSocketMsgPayload() {}
 
 func (m *Msg) UnmarshalJSON(data []byte) error {
 	var temp struct {

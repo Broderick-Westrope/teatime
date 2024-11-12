@@ -287,6 +287,13 @@ func (m *Model) readFromWebSocket(ctx context.Context) {
 
 		case msg := <-msgCh:
 			switch payload := msg.Payload.(type) {
+			case websocket.PayloadNotifyConnection:
+				m.msgCh <- tui.UpdateConnectionStatusMsg{
+					Username:  payload.Username,
+					Connected: payload.Connected,
+				}
+				return
+
 			case websocket.PayloadSendChatMessage:
 				if payload.ConversationMD.Name == m.creds.Username {
 					payload.ConversationMD.Name = payload.Message.Author

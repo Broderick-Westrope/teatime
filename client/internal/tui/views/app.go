@@ -82,6 +82,9 @@ func (m *AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.setSize(msg.Width, msg.Height)
 		return m, nil
 
+	case tui.UpdateConnectionStatusMsg:
+		cmd := m.conversations
+
 	case tui.OpenModalMsg:
 		cmd := m.setModal(msg.Modal)
 		return m, cmd

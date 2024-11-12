@@ -12,7 +12,10 @@ import (
 	"github.com/Broderick-Westrope/teatime/internal/entity"
 )
 
-type Conversation entity.Conversation
+type Conversation struct {
+	entity.Conversation
+	Connected bool
+}
 
 func (c Conversation) Title() string       { return c.Metadata.Name }
 func (c Conversation) FilterValue() string { return c.Metadata.Name }

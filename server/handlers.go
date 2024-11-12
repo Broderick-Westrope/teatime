@@ -134,10 +134,21 @@ func (app *application) handleWebSocket(workCtx context.Context, wg *sync.WaitGr
 		}
 		defer conn.Close()
 
+		err = app.hub.NotifyConnection(username, true)
+		if err != nil {
+			app.writeInternalServerError(ctx, w, "failed to notify connection", err)
+			return
+		}
 		app.hub.Add(conn, username)
 		app.log.InfoContext(ctx, "new client connected", slog.String("username", username))
+
 		defer func() {
 			app.hub.Remove(username)
+			err = app.hub.NotifyConnection(username, false)
+			if err != nil {
+				app.writeInternalServerError(ctx, w, "failed to notify disconnection", err)
+				return
+			}
 			app.log.InfoContext(ctx, "client disconnected", slog.String("username", username))
 		}()
 

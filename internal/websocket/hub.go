@@ -1,6 +1,7 @@
 package websocket
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"sync"
@@ -41,6 +42,31 @@ func (h *Hub) Remove(username string) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	delete(h.clients, username)
+}
+
+func (h *Hub) NotifyConnection(username string, connected bool) error {
+	msgBytes, err := json.Marshal(
+		Msg{
+			Type: MsgTypeNotifyConnection,
+			Payload: PayloadNotifyConnection{
+				Username:  username,
+				Connected: connected,
+			},
+		},
+	)
+	if err != nil {
+		return fmt.Errorf("marshalling WebSocket message: %w", err)
+	}
+
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	for _, conn := range h.clients {
+		err = conn.WriteMessage(websocket.TextMessage, msgBytes)
+		if err != nil {
+			return fmt.Errorf("error writing message: %w", err)
+		}
+	}
+	return nil
 }
 
 // Send sends a message to the provided clients.

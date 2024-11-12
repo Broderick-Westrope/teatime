@@ -48,6 +48,12 @@ type OpenModalMsg struct {
 // CloseModalMsg signals that any open modals should be closed.
 type CloseModalMsg struct{}
 
+// UpdateConnectionStatusMsg signals that a users connection status has changed.
+type UpdateConnectionStatusMsg struct {
+	Username  string
+	Connected bool
+}
+
 type QuitMsg struct{}
 
 type DebugLogMsg string
