@@ -3,10 +3,10 @@ package components
 import (
 	"fmt"
 
+	"github.com/Broderick-Westrope/charmutils"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/Broderick-Westrope/teatime/client/internal/tui"
 	"github.com/Broderick-Westrope/teatime/internal/entity"
 )
 
@@ -72,7 +72,7 @@ func (m *ConversationsModel) AddNewMessage(conversationMD entity.ConversationMet
 	for i, item := range items {
 		conversation, ok := item.(Conversation)
 		if !ok {
-			return nil, fmt.Errorf("failed to add new message to conversation: (list item) %w", tui.ErrInvalidTypeAssertion)
+			return nil, fmt.Errorf("failed to add new message to conversation: (list item) %w", charmutils.ErrInvalidTypeAssertion)
 		}
 
 		if conversation.Metadata.ID != conversationMD.ID {
@@ -113,7 +113,7 @@ func (m *ConversationsModel) RemoveConversation(conversationMD entity.Conversati
 	for i, item := range items {
 		conversation, ok := item.(Conversation)
 		if !ok {
-			return fmt.Errorf("failed to remove conversation: (list item) %w", tui.ErrInvalidTypeAssertion)
+			return fmt.Errorf("failed to remove conversation: (list item) %w", charmutils.ErrInvalidTypeAssertion)
 		}
 
 		if conversation.Metadata.ID == conversationMD.ID {
@@ -130,7 +130,7 @@ func (m *ConversationsModel) GetConversations() ([]entity.Conversation, error) {
 	for i := range items {
 		conversation, ok := items[i].(Conversation)
 		if !ok {
-			return nil, fmt.Errorf("failed to get conversations: %w", tui.ErrInvalidTypeAssertion)
+			return nil, fmt.Errorf("failed to get conversations: %w", charmutils.ErrInvalidTypeAssertion)
 		}
 		conversations[i] = entity.Conversation(conversation)
 	}

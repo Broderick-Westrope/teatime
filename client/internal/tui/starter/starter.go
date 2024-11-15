@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/Broderick-Westrope/charmutils"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/davecgh/go-spew/spew"
 
@@ -246,7 +247,7 @@ func (m *Model) appExitCleanup() error {
 	// save data
 	appModel, ok := m.child.(*views.AppModel)
 	if !ok {
-		return fmt.Errorf("failed to cast starter child to app model: %w", tui.ErrInvalidTypeAssertion)
+		return fmt.Errorf("failed to cast starter child to app model: %w", charmutils.ErrInvalidTypeAssertion)
 	}
 	conversations, err := appModel.GetConversations()
 	if err != nil {

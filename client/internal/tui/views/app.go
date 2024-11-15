@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Broderick-Westrope/charmutils"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/google/uuid"
@@ -152,11 +153,11 @@ func (m *AppModel) GetConversations() ([]entity.Conversation, error) {
 func (m *AppModel) updateFocussedChild(msg tea.Msg) (tea.Cmd, error) {
 	switch m.focus {
 	case appFocusRegionContacts:
-		return tui.UpdateTypedModel(&m.conversations, msg)
+		return charmutils.UpdateTypedModel(&m.conversations, msg)
 	case appFocusRegionChat:
-		return tui.UpdateTypedModel(&m.chat, msg)
+		return charmutils.UpdateTypedModel(&m.chat, msg)
 	case appFocusRegionModal:
-		return tui.UpdateTypedModel(&m.modal, msg)
+		return charmutils.UpdateTypedModel(&m.modal, msg)
 	default:
 		return nil, fmt.Errorf("unknown appFocusRegion %d", m.focus)
 	}
@@ -288,7 +289,7 @@ func (m *AppModel) View() string {
 	if m.focus == appFocusRegionModal && m.modal != nil {
 		modal := m.styles.Modal.Render(m.modal.View())
 		var err error
-		output, err = tui.OverlayCenter(output, modal, true)
+		output, err = charmutils.OverlayCenter(output, modal, true)
 		if err != nil {
 			return "** FAILED TO OVERLAY MODAL **" + output
 		}

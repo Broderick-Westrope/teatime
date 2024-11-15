@@ -3,6 +3,7 @@ package components
 import (
 	"fmt"
 
+	"github.com/Broderick-Westrope/charmutils"
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
@@ -49,7 +50,7 @@ func NewListDelegate(keys *ListDelegateKeyMap, styles list.DefaultItemStyles) li
 		if !ok {
 			return tui.FatalErrorCmd(fmt.Errorf(
 				"list delegate failed to get selected item: %w",
-				tui.ErrInvalidTypeAssertion,
+				charmutils.ErrInvalidTypeAssertion,
 			))
 		}
 
